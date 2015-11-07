@@ -1,0 +1,32 @@
+SELECAO_COMBOIO EQU 8018H
+OPERACAO_COMBOIO EQU 801AH
+BARRAS_VELOCIDADE EQU 8004H	
+MASCARA_VELOCIDADE_1COMBOIO EQU 0000000010000011b
+
+
+inicio:
+	MOV R1,SELECAO_COMBOIO
+	MOV R2,OPERACAO_COMBOIO
+	MOV R3,BARRAS_VELOCIDADE
+	MOVB R4,[R3]					;colocar num registo os valores das barras de velocidade
+	BIT R4, 3
+	JNZ next
+	MOV R5, 80H
+	ADD R4, R5
+
+next: 
+	MOV R5, MASCARA_VELOCIDADE_1COMBOIO
+
+	AND R4, R5
+	MOV R3,10H					;direcção do comboio positiva (0)
+	MOVB [R1],R3				
+	MOVB [R2],R4
+
+comboio2:
+	
+	
+	MOV R3, 0H
+	MOVB [R1],R3
+	MOVB [R2], R4
+
+fim:JMP inicio
