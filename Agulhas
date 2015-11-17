@@ -1,0 +1,71 @@
+BOTOES EQU 800CH			;1 on, 0 off
+AGULHAS EQU 8016H			; de 7 a 2 numero agulha, 1-0 estado da agulha (01=liga para a esquerda 10=liga para a direita, 00 e 11 indefinido )
+ESQUERDA EQU 01H 
+DIREITA EQU 02H
+
+PLACE 1000H
+
+estados_agulhas:               ; tabela para os estados das agulhas (DIREITA e ESQUERDA).
+                               ; 00 cinzento, 01 ESQUERDA, 10 DIREITA, 11 amarelo.
+     STRING    DIREITA           ; agulha 0
+     STRING    DIREITA           ; agulha 1
+     STRING    DIREITA           ; agulha 2
+     STRING    DIREITA           ; agulha 3
+
+
+;======================================================================
+PLACE 0000H
+
+
+inicio:
+MOV R1, BOTOES
+MOV R2, AGULHAS 
+MOVB R0, [R1]
+MOV R4, 0H 					;contador
+
+verificar_mudanca_botoes:
+CMP R10, R0
+JZ inicio
+
+guardar_valor_lido_botoes:
+MOV R10, R0
+
+
+verificar_estado_agulhas:
+BIT R0,0					;testar o bit 0 corresponde a ver se o botao foi carregado 
+JZ proximo_botao			;se estiver a 1 o bit mudamos a cor, caso contrário seguimos pro proximo bit
+
+
+;R4 numero do agulha a ser mudado, [R5] agulha tabela, [R3] agulha registo
+;R7 temp que fica com o resultado das contas dando o valor que corresponde ao agulha
+ver_agulha:
+MOV R5, estados_agulhas		; movemos o endereço das cores_agulhas para o R5
+ADD R5, R4				; somamos o numero de bit que contamos para saber o agulha a qual aceder
+MOV R7, R4				; guardar o valor de R4 
+SHL R7, 2					; shift 2 para se poder somar e gerar um bit na 3a posicao ou superior
+
+ver_estado_tabela:
+MOVB R8, [R5]
+CMP R8, DIREITA 				;se for DIREITA, muda para ESQUERDA.
+JZ por_agulha_esquerda
+
+por_agulha_DIREITA:
+MOV R8, DIREITA
+JMP mudar_agulha
+
+por_agulha_esquerda:
+MOV R8, ESQUERDA
+
+mudar_agulha:
+MOVB [R5], R8
+ADD R7, R8					;decide o sinal
+MOVB [R2], R7				;escreve na agulha
+
+proximo_botao:
+ADD R4, 1H				;incrementar 1 ao contador
+SHR R0, 1					;rodamos para passar ao proximo bit para testar
+MOV R7, 4H
+CMP R4, R7				;quando 8-R4 for 0, ja vimos todos os bits, por isso repete-se
+JNZ verificar_estado_agulhas
+
+fim: JMP inicio
