@@ -1,32 +1,262 @@
+
+;* * * * * * *************************************************************************
+; Constantes *
+;* * * * * * *************************************************************************
 SELECAO_COMBOIO EQU 8018H
 OPERACAO_COMBOIO EQU 801AH
 BARRAS_VELOCIDADE EQU 8004H	
-MASCARA_VELOCIDADE_1COMBOIO EQU 0000000010000011b
+
+TECLADO07 EQU 8006H		     		; cada bit corresponde a um semaforo 7654 3210
+TECLADO8F EQU 8008H		     		; cada bit corresponde a um semaforo **** **98
+SEMAFOROS EQU 8012H		     		; Os bits 7 a 2 indicam o número do semáforo1. Os bits 1 e 0 indicam a cor
+
+BOTOES_PRESSAO EQU 800CH			; 1 on, 0 off
+AGULHAS EQU 8016H					; de 7 a 2 numero agulha, 1-0 estado da agulha (01=liga para a esquerda 10=liga para a direita, 00 e 11 indefinido )
+ESQUERDA EQU 01H					; Valor do estado da agulha quando esta em modo "esquerda"
+DIREITA EQU 02H						; Valor do estado da agulha quando esta em modo "direita"
+
+NUMERO_EVENTOS_SENSORES EQU 801CH	;cada evento corresponde a 2 valores no porto na INFORMACAO_SENSORES
+INFORMACAO_SENSORES EQU 801EH
+LCD_SUPERIOR EQU 8000H				;endereCo do LCD superior
+LCD_INFERIOR EQU 8002H				;endereCo do LCD inferior
 
 
-inicio:
-	MOV R1,SELECAO_COMBOIO
-	MOV R2,OPERACAO_COMBOIO
-	MOV R3,BARRAS_VELOCIDADE
-	MOVB R4,[R3]					;colocar num registo os valores das barras de velocidade
-	BIT R4, 3
-	JNZ next
-	MOV R5, 80H
-	ADD R4, R5
+VERDE EQU 2H                 		; Valor da cor Verde no semaforo
+VERMELHO EQU 1H              		; Valor da cor Vermelha no semaforo
+CINZENTO EQU 0H              		; Valor da cor Cinzenta no semaforo
 
-next: 
-	MOV R5, MASCARA_VELOCIDADE_1COMBOIO
+MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR EQU 0000000000001011b
+MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 0000000010000011b
 
-	AND R4, R5
-	MOV R3,10H					;direcção do comboio positiva (0)
-	MOVB [R1],R3				
-	MOVB [R2],R4
+VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H
+VALOR_ANTERIOR_SEMAFOROS07 EQU 0H
+VALOR_ANTERIOR_SEMAFOROS89 EQU 0H
+VALOR_ANTERIOR_AGULHAS EQU 0H
+VALOR_ANTERIOR_SENSOR EQU 0H
 
-comboio2:
+;*********************************************************************************************************
+;Tabelas
+;*********************************************************************************************************
+PLACE     1000H
+
+pilha:		TABLE 100H	      ; espaCo reservado para a pilha (200H bytes, pois sao 100H words)
+SP_inicial:				      ; este e o endereCo (1200H) com que o SP deve ser inicializado.
+                              ; O 1º end. de retorno será armazenado em 11FEH (1200H-2)
+
+estados_agulhas:              ; tabela para os estados das agulhas (DIREITA e ESQUERDA).
+                              ; 00 cinzento, 01 ESQUERDA, 10 DIREITA, 11 amarelo.
+    STRING    DIREITA         ; agulha 0
+    STRING    DIREITA         ; agulha 1
+    STRING    DIREITA         ; agulha 2
+    STRING    DIREITA         ; agulha 3
+
+cores_semaforos:              ; tabela para as cores dos semáforos (VERDE, CINZENTO ou VERMELHO).
+                              ; 00 cinzento, 01 vermelho, 10 verde, 11 amarelo.
+    STRING    VERDE           ; cor do semáforo 0
+    STRING    VERDE           ; cor do semáforo 1
+    STRING    VERDE           ; cor do semáforo 2
+    STRING    VERDE           ; cor do semáforo 3
+    STRING    VERDE           ; cor do semáforo 4
+    STRING    VERDE           ; cor do semáforo 5
+    STRING    VERDE           ; cor do semáforo 6
+    STRING    VERDE           ; cor do semáforo 7
+    STRING    VERDE           ; cor do semáforo 8
+    STRING    VERDE           ; cor do semáforo 9
+
+valores_anteriores:			  ;tabela com os valores anteriores para comparaCao
 	
-	
-	MOV R3, 0H
-	MOVB [R1],R3
-	MOVB [R2], R4
+	WORD      VALOR_ANTERIOR_MOVER_COMBOIOS
+	WORD      VALOR_ANTERIOR_SEMAFOROS07
+	WORD      VALOR_ANTERIOR_SEMAFOROS89
+	WORD      VALOR_ANTERIOR_AGULHAS
+	WORD      VALOR_ANTERIOR_SENSOR
 
-fim:JMP inicio
+
+
+;*******************************************************
+; Programa
+;*******************************************************
+PLACE 0H
+MOV SP, SP_inicial
+start:
+
+MOV R0,0H 					;contador para aceder a tabela 
+MOV R1,valores_anteriores
+
+verificar_mudanca_mover_comboios:
+
+MOV R2, BARRAS_VELOCIDADE
+CALL comparar
+CMP R3,R4
+JZ verificar_mudanca_semaforos07
+CALL mover_comboios
+
+
+verificar_mudanca_semaforos07:
+
+MOV R2, TECLADO07
+CALL comparar
+CMP R3,R4
+CALL semaforos
+
+verificar_mudanca_semaforos8F:
+MOV R2, TECLADO8F
+CALL comparar
+CMP R3,R4
+JZ verificar_mudanca_agulhas
+CALL semaforos
+
+verificar_mudanca_agulhas:
+
+MOV R2, BOTOES_PRESSAO
+CALL comparar
+CMP R3,R4
+JZ verificar_mudanca_sensores
+CALL agulhas
+
+verificar_mudanca_sensores:
+
+MOV R2, INFORMACAO_SENSORES
+CALL comparar
+CMP R3,R4
+JZ fim
+CALL sensores 
+
+
+fim: JMP start
+
+comparar:
+PUSH R1
+PUSH R2
+ADD R1,R0
+MOVB R3,[R2] 
+MOVB R4,[R1]
+ADD R0,2H
+POP R2
+POP R1
+RET
+
+;**********************************
+;mover comboios
+;**********************************
+mover_comboios:
+PUSH R0
+PUSH R1
+PUSH R2
+PUSH R3
+PUSH R4
+
+MOV R1,SELECAO_COMBOIO
+MOV R2,OPERACAO_COMBOIO
+MOV R3,BARRAS_VELOCIDADE
+MOVB R4,[R3]
+MOV R5, MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR
+MOV R7, MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
+
+
+
+comboio0:
+MOV R6,R4
+ROR R6,4					;roda para a direita para se poder aplicar o mesmo que ao comboio 2
+AND R6, R5					;mascara para ter a certeza que temos apenas os elementos necessários
+BIT R6, 3					;ler o bit 3 para ver a direcCao dele
+JZ comboio1					;se o bit for zero a direcCao e frente, se for 1 e sentido negativo
+MOV R0, 80H 					
+ADD R6, R0					;poe o sentido negativo
+
+comboio1:
+AND R4, R5
+BIT R4, 3					;ler o bit 3 para ver a direcCao dele
+JZ escreve_comboio1			;se o bit for zero a direcCao e frente, se for 1 e sentido negativo
+MOV R0, 80H 				;poe o bit negativo para mudar o sentido
+ADD R4, R0
+
+
+escreve_comboio1: 
+AND R6,R7					
+MOV R0,10H					;SelecCao do Comboio 0
+MOVB [R1],R0				
+MOVB [R2],R6
+escreve_comboios0:
+AND R4,R7					;limpeza do que nao e necessário
+MOV R0,0H					;SelecCao do Comboio 1
+MOVB [R1],R0				
+MOVB [R2],R4
+
+fim_mover_comboio:
+POP R4
+POP R3
+POP R2
+POP R1
+POP R0
+RET
+
+;****************************************
+;semaforos
+;****************************************
+semaforos:
+PUSH R0
+PUSH R1
+PUSH R2
+PUSH R3
+PUSH R4
+
+
+fim_semaforos:
+POP R4
+POP R3
+POP R2
+POP R1
+POP R0
+RET
+
+
+;****************************************
+;agulhas
+;****************************************
+agulhas:
+PUSH R0
+PUSH R1
+PUSH R2
+PUSH R3
+PUSH R4
+
+fim_agulhas:
+POP R4
+POP R3
+POP R2
+POP R1
+POP R0
+RET
+
+;****************************************
+;sensores
+;****************************************
+sensores:
+PUSH R0
+PUSH R1
+PUSH R2
+PUSH R3
+PUSH R4
+MOV R1, INFORMACAO_SENSORES
+MOV R2, LCD_SUPERIOR
+MOV R3, LCD_INFERIOR
+MOVB R0, [R1]
+
+SHR R0, 8
+BIT R0, 1
+JZ sensor_comboio_0
+
+sensor_comboio_1:
+MOVB [R2], R0
+
+sensor_comboio_0:
+MOVB [R3], R0
+
+fim_sensores:
+POP R4
+POP R3
+POP R2
+POP R1
+POP R0
+RET
