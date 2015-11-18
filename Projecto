@@ -34,9 +34,14 @@ VALOR_ANTERIOR_SEMAFOROS89 EQU 0H
 VALOR_ANTERIOR_AGULHAS EQU 0H
 VALOR_ANTERIOR_SENSOR EQU 0H
 
-;*********************************************************************************************************
+;*****************************************************************************************************************
 ;Tabelas
-;*********************************************************************************************************
+;*****************************************************************************************************************
+;pilha: usada para o stack point
+;estados das agulhas: usada para saber a que estado estao as agulhas no momento presente (apos movimento)
+;cores semaforos: usada para saber a que estado/cor estao os semaforos no momento presente(apos mudança de cor)
+;valores anteriores: usada para saber qual o valor anteriormente lido para apenas aplicar mudança se for diferente
+;******************************************************************************************************************
 PLACE     1000H
 
 pilha:		TABLE 100H	      ; espaCo reservado para a pilha (200H bytes, pois sao 100H words)
@@ -73,10 +78,13 @@ valores_anteriores:			  ;tabela com os valores anteriores para comparaCao
 
 
 
-;*******************************************************
+;*****************************************************************************************
 ; Programa
-;*******************************************************
+;*****************************************************************************************
+;verificar se houve mudança aos comandos de leitura, se sim, entao inicializa-se a rotina 
+;*****************************************************************************************
 PLACE 0H
+
 MOV SP, SP_inicial
 
 start:
@@ -132,9 +140,13 @@ JZ fim
 MOVB [R2], R4
 CALL sensores 
 
-
 fim: JMP start
 
+;*****************************************
+;Rotinas Auxiliares ao Programa Principal
+;*****************************************
+;
+;*****************************************
 comparar:
 PUSH R1
 PUSH R2
@@ -146,9 +158,20 @@ POP R2
 POP R1
 RET
 
-;**********************************
-;mover comboios
-;**********************************
+;****************************************************************************************************************************************
+; Mover Comboios
+;****************************************************************************************************************************************
+;Programa responsavel pelo movimento dos comboios consoante a barra de velocidades (slider/R3)
+;
+;R1: endereço de seleCao de comboios usado para escolher o comboio e operaCao executada (mudar sentido)
+;R2: endereço de operaCao comboio usado para escrever a velocidade e sentido do comboio escolhido pela seleCao (R1)
+;R3: endereço de barras de velocidades (sliders) de onde lemos qual o comboio (slider superior comboio azul/0) o sentido e velocidade
+;R4: registo com o valor da barra de velocidades
+;R5: mascara usada para filtrar bits desnecessarios antes de decidir o sentido do comboio
+;R6: registo com o valor de barra de velocidades para se usar no calculo do comboio 1 sem alterar o comboio 0
+;R7: mascara usada para filtrar bits desncessarios apos calculado o valor que vamos atribuir ao comboio
+;*****************************************************************************************************************************************
+
 mover_comboios:
 PUSH R0
 PUSH R1
@@ -207,8 +230,15 @@ POP R0
 RET
 
 ;**********************************************************************************************************************
-;semaforos
+; Semaforos de 0 a 8
 ;**********************************************************************************************************************
+; Programa responsavel pela cor dos semaforos de 0 a 7 atraves dos botoes do teclado de 0 a 7 (Verde/Vermelho)
+;
+; Rotinas Auxiliares: 
+; ver_semaforo: calcula o valor a colocar no semaforo 
+; proximo_botao: passamos ao proximo botao ao fazer shift do valor para a direita e acrescentamos 1 ao contador
+; escrever_semaforo: escreve no semaforo e na tabela os valores do semaforo para mudar a cor
+;
 ; R0: valor no endereCo do teclado07
 ; R1: le o teclado de 0 a 7
 ; R2: le o teclado de 8 a F 
@@ -267,9 +297,9 @@ POP R1
 POP R0
 RET
 
-;*********************************
+;**********************************
 ; Rotinas auxiliares aos Semaforos
-;*********************************
+;**********************************
 ver_semaforo:
 PUSH R4
 MOV R5, cores_semaforos		; movemos o endereço das cores_semaforos para o R5
@@ -291,10 +321,25 @@ MOVB [R3], R7                 ;escreve no semaforo
 RET
 
 
-;********************
-;Semaforos8F
-;********************
-
+;***************************************************************************************************************************
+; Semaforos de 8 a F
+;***************************************************************************************************************************
+; Programa responsavel por escrever os valores dos semaforos 8 e 9 consoante os botoes 8 e 9 do teclado
+;
+; Rotinas Auxiliares: 
+; ver_semaforo: calcula o valor a colocar no semaforo 
+; proximo_botao: passamos ao proximo botao ao fazer shift do valor para a direita e acrescentamos 1 ao contador
+; escrever_semaforo: escreve no semaforo e na tabela os valores do semaforo para mudar a cor
+;
+; R0: valor no endereCo do teclado07
+; R1: le o teclado de 0 a 7
+; R2: le o teclado de 8 a F 
+; R3: e o endereCo onde vamos escrevever os semaforos
+; R4: e um contador que usamos para podermos ver de que semaforo estamos a tratar conforme o numero de shifts feitos
+; R5: endereco das tabelas com os valores dos semaforos atuais
+; R7: temporario que esta 2 bits a esquerda para estar na posicao do semaforo para se escrever
+; R8: valor temporario com o sinal que estava na tabela da cor dos semaforos
+;****************************************************************************************************************************
 semaforos8F:
 PUSH R0
 PUSH R1
