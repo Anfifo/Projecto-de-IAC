@@ -1,7 +1,8 @@
 
-;* * * * * * *************************************************************************
+;* * * * * * * ************************************************************************
 ; Constantes *
-;* * * * * * *************************************************************************
+;* * * * * * * ************************************************************************
+
 SELECAO_COMBOIO EQU 8018H
 OPERACAO_COMBOIO EQU 801AH
 BARRAS_VELOCIDADE EQU 8004H	
@@ -28,7 +29,7 @@ CINZENTO EQU 0H              		; Valor da cor Cinzenta no semaforo
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H
 
-VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H
+VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H ; valores atribuidos anteriormente (iniciados a 0)
 VALOR_ANTERIOR_SEMAFOROS07 EQU 0H
 VALOR_ANTERIOR_SEMAFOROS89 EQU 0H
 VALOR_ANTERIOR_AGULHAS EQU 0H
@@ -78,82 +79,86 @@ valores_anteriores:			  ;tabela com os valores anteriores para comparaCao
 
 
 
-;*****************************************************************************************
-; Programa
-;*****************************************************************************************
-;verificar se houve mudança aos comandos de leitura, se sim, entao inicializa-se a rotina 
-;*****************************************************************************************
+;******************************************************************************************************
+; Programa Principal
+;******************************************************************************************************
+; Programa para verificar se houve mudança aos comandos de leitura, se sim, entao inicializa-se a rotina 
+;******************************************************************************************************
 PLACE 0H
 
 MOV SP, SP_inicial
-
+;------------------------------------------------------------------------------------------------------
 start:
 
-MOV R0,0H 					;contador para aceder a tabela 
-MOV R1,valores_anteriores
+MOV R0,0H 					         ; contador para aceder a tabela 
+MOV R1,valores_anteriores            ; endereço com a tabela dos valores anteriores
 
-verificar_mudanca_mover_comboios:
-
+;------------------------------------------------------------------------------------------------------
+verificar_mudanca_mover_comboios:    ; verificar se houve mudanCa dos valores nos sliders
 MOV R2, BARRAS_VELOCIDADE
 CALL comparar
+
 CMP R3,R4
-JZ verificar_mudanca_semaforos07
+JZ verificar_mudanca_semaforos07     ; caso nao haja mudanCa saltamos para o teclado 
+
 MOVB [R1], R3
-CALL mover_comboios
+CALL mover_comboios                  ; caso haja mudanCa chamamos a rotina que trata de mover os comboios
 
-
-verificar_mudanca_semaforos07:
-
+;-------------------------------------------------------------------------------------------------------
+verificar_mudanca_semaforos07:       ; verificar se houve mudanCa dos valores do teclado 0 a 7
 MOV R2, TECLADO07
 CALL comparar
-CMP R3,R4
-JZ verificar_mudanca_semaforos8F
-MOVB [R1], R3
-CALL semaforos07
 
-verificar_mudanca_semaforos8F:
+CMP R3,R4
+JZ verificar_mudanca_semaforos8F     ; caso nao haja mudanCa saltamos para o teclado 8 a F 
+
+MOVB [R1], R3
+CALL semaforos07                     ; caso haja mudanCa chamamos a rotina que trata dos semaforos 0 a 7
+
+;--------------------------------------------------------------------------------------------------------
+verificar_mudanca_semaforos8F:       ; verificar se houve mudanCa dos valores no teclado 8 a F
 
 MOV R2, TECLADO8F
 CALL comparar
+
 CMP R3,R4
-JZ verificar_mudanca_agulhas
+JZ verificar_mudanca_agulhas        ; caso nao haja mudanCa saltamos para os botoes de Pressao
+
 MOVB [R1], R3
-CALL semaforos8F
+CALL semaforos8F                    ; caso haja mudanCa chamamos a rotina que trata dos semaforos 8 e 9
 
-
-verificar_mudanca_agulhas:
-
+;--------------------------------------------------------------------------------------------------------
+verificar_mudanca_agulhas:          ; verificar se houve mudanCa dos valores dos botoes de Pressao
 MOV R2, BOTOES_PRESSAO
 CALL comparar
+
 CMP R3,R4
-JZ verificar_mudanca_sensores
+JZ verificar_mudanca_sensores       ; caso nao haja mudanCa saltamos para os Sensores
+
 MOVB [R1], R3
-CALL agulhas
+CALL agulhas                        ; caso haja mudanCa chamamos a rotina que trata das agulhas
 
 
-verificar_mudanca_sensores:
-
-MOV R2, INFORMACAO_SENSORES
-CALL comparar
-CMP R3,R4
-JZ fim
-MOVB [R2], R4
+;--------------------------------------------------------------------------------------------------------
+verificar_mudanca_sensores:        ; iniciar a leitura dos sensores
 CALL sensores 
 
 fim: JMP start
 
-;*****************************************
-;Rotinas Auxiliares ao Programa Principal
-;*****************************************
-;
-;*****************************************
+;**************************************************************************************************************************************
+; Rotinas Auxiliares ao Programa Principal
+;**************************************************************************************************************************************
+; Rotina responsavel por mover para o Registo R3 e R4 os valores do endereço e o valor anterior da tabela respectiva depois comparar
+;***************************************************************************************************************************************
 comparar:
 PUSH R1
 PUSH R2
-ADD R1,R0
-MOVB R3,[R2] 
-MOVB R4,[R1]
-ADD R0,2H
+
+ADD R1,R0           ; soma o contador com o endereço das words para aceder a word desejada
+MOVB R3,[R2]        ; move o valor no endereço de que estamos a tratar 
+MOVB R4,[R1]        ; move o valor na tabela dos valores anteriores
+ADD R0,2H           ; aumenta o contador para aceder ao endereço 2 abaixo na proxima comparaCao (por ser uma word)
+
 POP R2
 POP R1
 RET
