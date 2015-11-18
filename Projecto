@@ -78,6 +78,7 @@ valores_anteriores:			  ;tabela com os valores anteriores para comparaCao
 ;*******************************************************
 PLACE 0H
 MOV SP, SP_inicial
+
 start:
 
 MOV R0,0H 					;contador para aceder a tabela 
@@ -89,6 +90,7 @@ MOV R2, BARRAS_VELOCIDADE
 CALL comparar
 CMP R3,R4
 JZ verificar_mudanca_semaforos07
+MOVB [R1], R3
 CALL mover_comboios
 
 
@@ -97,14 +99,19 @@ verificar_mudanca_semaforos07:
 MOV R2, TECLADO07
 CALL comparar
 CMP R3,R4
-CALL semaforos
+JZ verificar_mudanca_semaforos8F
+MOVB [R1], R3
+CALL semaforos07
 
 verificar_mudanca_semaforos8F:
+
 MOV R2, TECLADO8F
 CALL comparar
 CMP R3,R4
 JZ verificar_mudanca_agulhas
-CALL semaforos
+MOVB [R1], R3
+CALL semaforos8F
+
 
 verificar_mudanca_agulhas:
 
@@ -112,7 +119,9 @@ MOV R2, BOTOES_PRESSAO
 CALL comparar
 CMP R3,R4
 JZ verificar_mudanca_sensores
+MOVB [R1], R3
 CALL agulhas
+
 
 verificar_mudanca_sensores:
 
@@ -120,6 +129,7 @@ MOV R2, INFORMACAO_SENSORES
 CALL comparar
 CMP R3,R4
 JZ fim
+MOVB [R2], R4
 CALL sensores 
 
 
@@ -155,33 +165,38 @@ MOV R7, MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
 
 
 
-comboio0:
-MOV R6,R4
-ROR R6,4					;roda para a direita para se poder aplicar o mesmo que ao comboio 2
-AND R6, R5					;mascara para ter a certeza que temos apenas os elementos necessários
-BIT R6, 3					;ler o bit 3 para ver a direcCao dele
-JZ comboio1					;se o bit for zero a direcCao e frente, se for 1 e sentido negativo
-MOV R0, 80H 					
-ADD R6, R0					;poe o sentido negativo
+ler_velocidade_e_direcao_comboio0:
+MOV R6,R4								;copiar o valor para nao alterarmos este e podermos usar o R4 para calcular a velocidade do comboio 0
+SHR R6,4								;shift para a direita para usarmos apenas os bits de maior peso do comboio0 
+AND R6, R5								;filtrar com a mascara apenas os bits necessarios
+BIT R6, 3								;ler o bit 3 para ver a direcCao dele
+JZ ler_velocidade_e_direcao_comboio1	;se o bit for 0, saltamos para o proximo comboio para nao por o sentido negativo
 
-comboio1:
+por_sentido_negativo_do_comboio0:
+MOV R0, 80H 					
+ADD R6, R0								;poe o sentido negativo
+
+ler_velocidade_e_direcao_comboio1:
 AND R4, R5
 BIT R4, 3					;ler o bit 3 para ver a direcCao dele
-JZ escreve_comboio1			;se o bit for zero a direcCao e frente, se for 1 e sentido negativo
-MOV R0, 80H 				;poe o bit negativo para mudar o sentido
-ADD R4, R0
+JZ escreve_comboio1			;se o bit for zero saltamos para nao por o sentido negativo
+
+por_sentido_negativo_do_comboio1:
+MOV R0, 80H 				
+ADD R4, R0					;poe o bit a 1 para mudar o sentido
 
 
 escreve_comboio1: 
-AND R6,R7					
+AND R6,R7					;limpar os bits nao necessarios
 MOV R0,10H					;SelecCao do Comboio 0
-MOVB [R1],R0				
-MOVB [R2],R6
+MOVB [R1],R0				;escolher o comboio e operacao de mudar sentido
+MOVB [R2],R6				;escrever a mudanCa de sentido e velocidade
+
 escreve_comboios0:
-AND R4,R7					;limpeza do que nao e necessário
+AND R4,R7					;limpeza dos bits nao necessarios
 MOV R0,0H					;SelecCao do Comboio 1
-MOVB [R1],R0				
-MOVB [R2],R4
+MOVB [R1],R0				;escolher o comboio e a operacao de mudar sentido
+MOVB [R2],R4				;escrever a mudanCa de sentido e velocidade
 
 fim_mover_comboio:
 POP R4
@@ -191,23 +206,127 @@ POP R1
 POP R0
 RET
 
-;****************************************
+;**********************************************************************************************************************
 ;semaforos
-;****************************************
-semaforos:
+;**********************************************************************************************************************
+; R0: valor no endereCo do teclado07
+; R1: le o teclado de 0 a 7
+; R2: le o teclado de 8 a F 
+; R3: e o endereCo onde vamos escrevever os semaforos
+; R4: e um contador que usamos para podermos ver de que semaforo estamos a tratar conforme o numero de shifts feitos
+; R5: endereco das tabelas com os valores dos semaforos atuais
+; R8: valor temporario com o sinal que estava na tabela da cor dos semaforos
+;***********************************************************************************************************************
+
+semaforos07:
 PUSH R0
 PUSH R1
 PUSH R2
 PUSH R3
 PUSH R4
 
+MOV R1, TECLADO07
+MOV R2, TECLADO8F
+MOV R3, SEMAFOROS
+MOV R4, 0H					; iniciarlizar o contador a 0 
+MOVB R0, [R1]
 
-fim_semaforos:
+ler_botoes07:
+BIT R0,0					;testar o bit 0 corresponde a ver se o botao foi carregado 
+JNZ mudar_semaforo			;se estiver a 1 o bit o botao foi premido entao vamos mudar a cor
+CALL proximo_botao    		;caso contrario passamos ao proximo botao 
+JMP ler_botoes07
+
+mudar_semaforo:
+CALL ver_semaforo
+
+ver_cor_da_tabela:
+MOVB R8, [R5]
+CMP R8, VERDE 				;se for verde, muda para vermelho.
+JZ por_semaforo_vermelho
+
+por_semaforo_verde:
+MOV R8, VERDE
+JMP mudar_semaforo
+
+por_semaforo_vermelho:
+MOV R8, VERMELHO
+
+escrever_o_valor_do_semaforo07:
+CALL escrever_semaforo
+RET
+
+fim_semaforos07:
 POP R4
 POP R3
 POP R2
 POP R1
 POP R0
+RET
+
+;********************
+;Semaforos8F
+;********************
+
+semaforos8F:
+PUSH R0
+PUSH R1
+PUSH R2
+PUSH R3
+PUSH R4
+
+MOV R4, 8H
+MOVB R0, [R2]
+
+ler_botoes8F:
+BIT R0,0					;testar o bit 0 corresponde a ver se o botao foi carregado 
+JNZ mudar_semaforo2			;se estiver a 1 o bit o botao foi premido entao vamos mudar a cor
+CALL proximo_botao    		;caso contrario passamos ao proximo botao 
+JMP ler_botoes8F
+
+mudar_semaforo2:
+CALL ver_semaforo
+
+ver_cor_da_tabela2:
+MOVB R8, [R5]
+CMP R8, CINZENTO               ;se for Cinzento, muda para vermelho.
+JZ por_semaforo_vermelho2
+
+por_semaforo_cinzento:
+MOV R8, CINZENTO
+JMP escrever_o_valor_do_semaforo8F
+
+por_semaforo_vermelho2:
+MOV R8, VERMELHO
+
+escrever_o_valor_do_semaforo8F:
+CALL escrever_semaforo
+
+fim_semaforos8F:
+POP R4
+POP R3
+POP R2
+POP R1
+POP R0
+RET
+;*********************************
+; Rotinas auxiliares aos Semaforos
+;*********************************
+ver_semaforo:
+MOV R5, cores_semaforos		; movemos o endereço das cores_semaforos para o R5
+ADD R5, R4					; somamos o numero de bit que contamos para saber o semaforo a qual aceder
+SHL R4, 2					; shift 2 para se poder somar e gerar um bit na 3a posicao ou superior
+RET
+
+proximo_botao:
+ADD R4, 1H				;incrementar 1 ao contador
+SHR R0, 1				;rodamos para passar ao proximo bit para testar
+RET
+
+escrever_semaforo:
+MOVB [R5], R8
+ADD R7, R8                    ;decide o sinal
+MOVB [R3], R7                 ;escreve no semaforo
 RET
 
 
