@@ -387,17 +387,66 @@ POP R1
 POP R0
 RET
 
-;****************************************
+;****************************************************************************************************************************
 ;agulhas
-;****************************************
+;****************************************************************************************************************************
+; Programa responsavel por alterar os valores das agulhas consoante os botoes botoes de pressao 0-3
+;
+; Rotinas Auxiliares: 
+; ver_agulhas: calcula o valor a colocar na agulha 
+; proximo_botao_agulhas: passamos ao proximo botao ao fazer shift do valor para a direita e acrescentamos 1 ao contador
+; escrever_agulhas: escreve nas agulhas e na tabela os estados das agulhas
+;
+; R0: valor no endereCo dos botoes de pressao
+; R1: endereCo dos Botoes de Pressao
+; R2: - 
+; R3: e o endereCo onde vamos escrevever os valores para alterar o estado das agulhas
+; R4: e um contador que usamos para podermos ver de que agulha estamos a tratar conforme o numero de shifts feitos
+; R5: endereco das tabelas com os estados das agulhas
+; R7: temporario que esta 2 bits a esquerda para estar na posicao das agulhas para se escrever
+; R8: valor temporario com o estado em que esteva a agulha 
+;****************************************************************************************************************************
+
 agulhas:
+
 PUSH R0
 PUSH R1
 PUSH R2
 PUSH R3
 PUSH R4
 
+MOV R1, BOTOES_PRESSAO
+MOV R3, AGULHAS
+MOV R4, 0H                          ; iniciarlizar o contador a 0 
+MOVB R0, [R1]                       ; mover os valores dos botoes de pressao para R1
 
+CMP R0, 0
+JZ fim_agulhas                      ;se for 0 entao nao ha valores para atribuir
+
+ler_botoes_pressao:
+BIT R0,0                            ;testar o bit 0 corresponde a ver se o botao foi carregado 
+JNZ mudar_agulha                    ;se estiver a 1 o bit o botao foi premido entao vamos mudar o estado
+CALL proximo_botao_agulhas          ;caso contrario passamos ao proximo botao 
+JMP ler_botoes_pressao
+
+mudar_agulha:
+CALL ver_agulhas
+
+ver_estado_da_tabela:
+MOVB R8, [R5]
+CMP R8, DIREITA                     ;se estiver para a direita, muda para esquerda
+JZ por_agulha_esquerda
+
+por_agulha_direita:
+MOV R8, DIREITA
+JMP escrever_o_valor_do_agulhas
+
+por_agulha_esquerda:
+MOV R8, ESQUERDA
+
+escrever_o_valor_do_agulhas:
+CALL escrever_agulhas
+RET
 
 fim_agulhas:
 POP R4
@@ -406,6 +455,30 @@ POP R2
 POP R1
 POP R0
 RET
+
+;**********************************
+; Rotinas auxiliares as agulhas
+;**********************************
+ver_agulhas:
+PUSH R4
+MOV R5, estados_agulhas     ; movemos o endereço dos estados_agulhas (tabela) para o R5
+ADD R5, R4                  ; somamos o numero de bit que contamos para saber o agulha a qual aceder
+MOV R7, R4                  ; guardar o valor de R4 
+SHL R7, 2                   ; shift em 2 bits do valor de que era R4 para se poder escrever na agulha como numero do agulha
+POP R4
+RET
+
+proximo_botao_agulhas:
+ADD R4, 1H                   ;incrementar 1 ao contador
+SHR R0, 1                    ;rodamos para passar ao proximo bit para testar
+RET
+
+escrever_agulhas:
+MOVB [R5], R8                ;escrever na tabela o estado atribuido 
+ADD R7, R8                   ;decide a posiCao para que vai mudar
+MOVB [R3], R7                ;escreve na agulha
+RET
+
 
 ;****************************************
 ;sensores
