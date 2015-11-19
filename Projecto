@@ -1,39 +1,47 @@
+;******************************;
+;*        Grupo 33:           *;
+;* Andre Fonseca     84698    *;
+;* Catarina Custodio 84705    *;
+;* Isabel Dias       84726    *;
+;******************************;
 
-;* * * * * * * ************************************************************************
-; Constantes *
-;* * * * * * * ************************************************************************
 
-SELECAO_COMBOIO EQU 8018H
-OPERACAO_COMBOIO EQU 801AH
-BARRAS_VELOCIDADE EQU 8004H	
+;*************************************************************************************
+; Constantes 
+;*************************************************************************************
 
-TECLADO07 EQU 8006H		     		; cada bit corresponde a um semaforo 7654 3210
-TECLADO8F EQU 8008H		     		; cada bit corresponde a um semaforo **** **98
+SELECAO_COMBOIO     EQU 8018H
+OPERACAO_COMBOIO    EQU 801AH
+BARRAS_VELOCIDADE   EQU 8004H	
+
+TECLADO07 EQU 8006H		     		; cada posiCao do bit corresponde a um semaforo 7654 3210
+TECLADO8F EQU 8008H		     		; cada posiCao do bit corresponde a um semaforo **** **98
 SEMAFOROS EQU 8012H		     		; Os bits 7 a 2 indicam o número do semáforo1. Os bits 1 e 0 indicam a cor
 
-BOTOES_PRESSAO EQU 800CH			; 1 on, 0 off
-AGULHAS EQU 8016H					; de 7 a 2 numero agulha, 1-0 estado da agulha (01=liga para a esquerda 10=liga para a direita, 00 e 11 indefinido )
-ESQUERDA EQU 01H					; Valor do estado da agulha quando esta em modo "esquerda"
-DIREITA EQU 02H						; Valor do estado da agulha quando esta em modo "direita"
+BOTOES_PRESSAO  EQU 800CH			; 1 on, 0 off
+AGULHAS         EQU 8016H			; de 7 a 2 numero agulha, 1-0 estado da agulha (01=liga para a esquerda 10=liga para a direita, 00 e 11 indefinido )
+ESQUERDA        EQU 01H				; Valor do estado da agulha quando esta em modo "esquerda"
+DIREITA         EQU 02H				; Valor do estado da agulha quando esta em modo "direita"
 
 NUMERO_EVENTOS_SENSORES EQU 801CH	;cada evento corresponde a 2 valores no porto na INFORMACAO_SENSORES
-INFORMACAO_SENSORES EQU 801EH
-LCD_SUPERIOR EQU 8000H				;endereCo do LCD superior
-LCD_INFERIOR EQU 8002H				;endereCo do LCD inferior
+INFORMACAO_SENSORES     EQU 801EH
+LCD_SUPERIOR  EQU 8000H				;endereCo do LCD superior
+LCD_INFERIOR  EQU 8002H				;endereCo do LCD inferior
+NAO_HA_EVENTO EQU 0FFFFH            ; indica que não houve passagem por sensor
 
 
-VERDE EQU 2H                 		; Valor da cor Verde no semaforo
+VERDE    EQU 2H                 	; Valor da cor Verde no semaforo
 VERMELHO EQU 1H              		; Valor da cor Vermelha no semaforo
 CINZENTO EQU 0H              		; Valor da cor Cinzenta no semaforo
 
-MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR EQU 0BH
+MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H
 
 VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H ; valores atribuidos anteriormente (iniciados a 0)
-VALOR_ANTERIOR_SEMAFOROS07 EQU 0H
-VALOR_ANTERIOR_SEMAFOROS89 EQU 0H
-VALOR_ANTERIOR_AGULHAS EQU 0H
-VALOR_ANTERIOR_SENSOR EQU 0H
+VALOR_ANTERIOR_SEMAFOROS07    EQU 0H
+VALOR_ANTERIOR_SEMAFOROS89    EQU 0H
+VALOR_ANTERIOR_AGULHAS        EQU 0H
+VALOR_ANTERIOR_SENSOR         EQU 0H
 
 ;*****************************************************************************************************************
 ;Tabelas
@@ -71,11 +79,11 @@ cores_semaforos:              ; tabela para as cores dos semáforos (VERDE, CINZ
 
 valores_anteriores:			  ;tabela com os valores anteriores para comparaCao
 	
-	WORD      VALOR_ANTERIOR_MOVER_COMBOIOS
-	WORD      VALOR_ANTERIOR_SEMAFOROS07
-	WORD      VALOR_ANTERIOR_SEMAFOROS89
-	WORD      VALOR_ANTERIOR_AGULHAS
-	WORD      VALOR_ANTERIOR_SENSOR
+	STRING      VALOR_ANTERIOR_MOVER_COMBOIOS
+	STRING      VALOR_ANTERIOR_SEMAFOROS07
+	STRING      VALOR_ANTERIOR_SEMAFOROS89
+	STRING      VALOR_ANTERIOR_AGULHAS
+	STRING      VALOR_ANTERIOR_SENSOR
 
 
 
@@ -141,6 +149,13 @@ CALL agulhas                        ; caso haja mudanCa chamamos a rotina que tr
 
 ;--------------------------------------------------------------------------------------------------------
 verificar_mudanca_sensores:        ; iniciar a leitura dos sensores
+MOV R2, NUMERO_EVENTOS_SENSORES
+MOV R0, NAO_HA_EVENTO              ;comparar, se for 0FFFFH (NAO HA EVENTO) nao ha evento
+CMP R2, R0                         ; se o numero de eventos for zero, nao iniciamos a leitura dos sensores
+JZ fim 
+CMP R2, 0H
+JZ fim
+
 CALL sensores 
 
 fim: JMP start
@@ -157,7 +172,7 @@ PUSH R2
 ADD R1,R0           ; soma o contador com o endereço das words para aceder a word desejada
 MOVB R3,[R2]        ; move o valor no endereço de que estamos a tratar 
 MOVB R4,[R1]        ; move o valor na tabela dos valores anteriores
-ADD R0,2H           ; aumenta o contador para aceder ao endereço 2 abaixo na proxima comparaCao (por ser uma word)
+ADD R0,1H           ; aumenta o contador para aceder ao endereço 2 abaixo na proxima comparaCao (por ser uma word)
 
 POP R2
 POP R1
@@ -292,7 +307,6 @@ MOV R8, VERMELHO
 
 escrever_o_valor_do_semaforo07:
 CALL escrever_semaforo
-RET
 
 fim_semaforos07:
 POP R4
@@ -302,9 +316,9 @@ POP R1
 POP R0
 RET
 
-;**********************************
+;***************************************************************************************************************************
 ; Rotinas auxiliares aos Semaforos
-;**********************************
+;***************************************************************************************************************************
 ver_semaforo:
 PUSH R4
 MOV R5, cores_semaforos		; movemos o endereço das cores_semaforos para o R5
@@ -315,14 +329,14 @@ POP R4
 RET
 
 proximo_botao:
-ADD R4, 1H				;incrementar 1 ao contador
-SHR R0, 1				;rodamos para passar ao proximo bit para testar
+ADD R4, 1H				    ;incrementar 1 ao contador
+SHR R0, 1				    ;rodamos para passar ao proximo bit para testar
 RET
 
 escrever_semaforo:
-MOVB [R5], R8				  ;escrever na tabela o sinal decidido 
-ADD R7, R8                    ;decide o sinal
-MOVB [R3], R7                 ;escreve no semaforo
+MOVB [R5], R8				;escrever na tabela o sinal decidido 
+ADD R7, R8                  ;decide o sinal
+MOVB [R3], R7               ;escreve no semaforo
 RET
 
 
@@ -395,7 +409,7 @@ RET
 ;****************************************************************************************************************************
 ;agulhas
 ;****************************************************************************************************************************
-; Programa responsavel por alterar os valores das agulhas consoante os botoes botoes de pressao 0-3
+; Processo responsavel por alterar os valores das agulhas consoante os botoes botoes de pressao 0-3
 ;
 ; Rotinas Auxiliares: 
 ; ver_agulhas: calcula o valor a colocar na agulha 
@@ -461,9 +475,9 @@ POP R1
 POP R0
 RET
 
-;**********************************
+;*******************************************************************************************************************************
 ; Rotinas auxiliares as agulhas
-;**********************************
+;*******************************************************************************************************************************
 ver_agulhas:
 PUSH R4
 MOV R5, estados_agulhas     ; movemos o endereço dos estados_agulhas (tabela) para o R5
@@ -485,29 +499,36 @@ MOVB [R3], R7                ;escreve na agulha
 RET
 
 
-;****************************************
-;sensores
-;****************************************
+;**********************************************************************************************************************************
+; Sensores
+;**********************************************************************************************************************************
 sensores:
 PUSH R0
 PUSH R1
 PUSH R2
 PUSH R3
 PUSH R4
+
 MOV R1, INFORMACAO_SENSORES
 MOV R2, LCD_SUPERIOR
 MOV R3, LCD_INFERIOR
-MOVB R0, [R1]
 
-SHR R0, 8
-BIT R0, 1
+MOVB R5, [R1]               ;1º byte (informação sobre o comboio que passou)
+MOVB R6, [R1]
+
+
+MOV R0, 30H
+ADD R6,R0
+
+BIT R5, 0
 JZ sensor_comboio_0
 
 sensor_comboio_1:
-MOVB [R2], R0
+MOVB [R2], R6
+JMP fim_sensores
 
 sensor_comboio_0:
-MOVB [R3], R0
+MOVB [R3], R6
 
 fim_sensores:
 POP R4
