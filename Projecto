@@ -25,8 +25,8 @@ DIREITA         EQU 02H				; Valor do estado da agulha quando esta em modo "dire
 
 NUMERO_EVENTOS_SENSORES EQU 801CH		; cada evento corresponde a 2 valores no porto na INFORMACAO_SENSORES
 INFORMACAO_SENSORES     EQU 801EH
-LCD_SUPERIOR  EQU 8000H				; endereCo do LCD superior
-LCD_INFERIOR  EQU 8002H				; endereCo do LCD inferior
+LCD_SUPERIOR  EQU 8000H				; endereco do LCD superior
+LCD_INFERIOR  EQU 8002H				; endereco do LCD inferior
 NAO_HA_EVENTO EQU 0FFFFH            		; indica que não houve passagem por sensor
 
 
