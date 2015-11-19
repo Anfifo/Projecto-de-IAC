@@ -102,48 +102,48 @@ MOV SP, SP_inicial
 start:
 
 MOV R0,0H 					         ; contador para aceder a tabela 
-MOV R1,valores_anteriores            ; endereCo com a tabela dos valores anteriores
+MOV R1,valores_anteriores            ; endereco com a tabela dos valores anteriores
 
 ;------------------------------------------------------------------------------------------------------
-verificar_mudanca_mover_comboios:    ; verificar se houve mudanCa dos valores nos sliders
+verificar_mudanca_mover_comboios:    ; verificar se houve mudanca dos valores nos sliders
 MOV R2, BARRAS_VELOCIDADE
 CALL antes_de_comparar
 
 CMP R3,R4
-JZ verificar_mudanca_semaforos07     ; caso nao haja mudanCa saltamos para o teclado 
+JZ verificar_mudanca_semaforos07     ; caso nao haja mudanca saltamos para o teclado 
 
-CALL mover_comboios                  ; caso haja mudanCa chamamos a rotina que trata de mover os comboios
+CALL mover_comboios                  ; caso haja mudanca chamamos a rotina que trata de mover os comboios
 
 ;-------------------------------------------------------------------------------------------------------
-verificar_mudanca_semaforos07:       ; verificar se houve mudanCa dos valores do teclado 0 a 7
+verificar_mudanca_semaforos07:       ; verificar se houve mudanca dos valores do teclado 0 a 7
 MOV R2, TECLADO07
 CALL antes_de_comparar
 
 CMP R3,R4
-JZ verificar_mudanca_semaforos8F     ; caso nao haja mudanCa saltamos para o teclado 8 a F 
+JZ verificar_mudanca_semaforos8F     ; caso nao haja mudanca saltamos para o teclado 8 a F 
 
-CALL semaforos07                     ; caso haja mudanCa chamamos a rotina que trata dos semaforos 0 a 7
+CALL semaforos07                     ; caso haja mudanca chamamos a rotina que trata dos semaforos 0 a 7
 
 ;--------------------------------------------------------------------------------------------------------
-verificar_mudanca_semaforos8F:       ; verificar se houve mudanCa dos valores no teclado 8 a F
+verificar_mudanca_semaforos8F:       ; verificar se houve mudanca dos valores no teclado 8 a F
 
 MOV R2, TECLADO8F
 CALL antes_de_comparar
 
 CMP R3,R4
-JZ verificar_mudanca_agulhas        ; caso nao haja mudanCa saltamos para os botoes de Pressao
+JZ verificar_mudanca_agulhas        ; caso nao haja mudanca saltamos para os botoes de Pressao
 
-CALL semaforos8F                    ; caso haja mudanCa chamamos a rotina que trata dos semaforos 8 e 9
+CALL semaforos8F                    ; caso haja mudanca chamamos a rotina que trata dos semaforos 8 e 9
 
 ;--------------------------------------------------------------------------------------------------------
-verificar_mudanca_agulhas:          ; verificar se houve mudanCa dos valores dos botoes de Pressao
+verificar_mudanca_agulhas:          ; verificar se houve mudanca dos valores dos botoes de Pressao
 MOV R2, BOTOES_PRESSAO
 CALL antes_de_comparar
 
 CMP R3,R4
-JZ verificar_mudanca_sensores       ; caso nao haja mudanCa saltamos para os Sensores
+JZ verificar_mudanca_sensores       ; caso nao haja mudanca saltamos para os Sensores
 
-CALL agulhas                        ; caso haja mudanCa chamamos a rotina que trata das agulhas
+CALL agulhas                        ; caso haja mudanca chamamos a rotina que trata das agulhas
 
 
 ;--------------------------------------------------------------------------------------------------------
@@ -172,8 +172,8 @@ PUSH R0
 PUSH R1
 PUSH R2
 
-ADD R1,R0           ; soma o contador com o endereCo das words para aceder a word desejada
-MOVB R3,[R2]        ; move o valor no endereCo de que estamos a tratar 
+ADD R1,R0           ; soma o contador com o endereco das words para aceder a word desejada
+MOVB R3,[R2]        ; move o valor no endereco de que estamos a tratar 
 MOVB R4,[R1]        ; move o valor na tabela dos valores anteriores
 MOVB [R1], R3       ; escrever na tabela o valor atual para ser usada para a proxima
 
@@ -181,21 +181,24 @@ POP R2
 POP R1
 POP R0
 
-ADD R0,1H           ; aumenta o contador para aceder ao endereCo abaixo na proxima comparaCao
+ADD R0,1H           ; aumenta o contador para aceder ao endereco abaixo na proxima comparaCao
 RET
 
 ;****************************************************************************************************************************************
 ; Mover Comboios
 ;****************************************************************************************************************************************
-;Programa responsavel pelo movimento dos comboios consoante a barra de velocidades (slider/R3)
+; Processo responsavel pelo movimento dos comboios consoante a barra de velocidades (slider/R3)
 ;
-;R1: endereCo de seleCao de comboios usado para escolher o comboio e operaCao executada (mudar sentido)
-;R2: endereCo de operaCao comboio usado para escrever a velocidade e sentido do comboio escolhido pela seleCao (R1)
-;R3: endereCo de barras de velocidades (sliders) de onde lemos qual o comboio (slider superior comboio azul/0) o sentido e velocidade
-;R4: registo com o valor da barra de velocidades
-;R5: mascara usada para filtrar bits desnecessarios antes de decidir o sentido do comboio
-;R6: registo com o valor de barra de velocidades para se usar no calculo do comboio 1 sem alterar o comboio 0
-;R7: mascara usada para filtrar bits desncessarios apos calculado o valor que vamos atribuir ao comboio
+; Arguemntos: Nenhum
+; Retorna: Nada
+;
+; R1: endereco de selecao de comboios usado para escolher o comboio e operacao executada (mudar sentido)
+; R2: endereco de operacao comboio usado para escrever a velocidade e sentido do comboio escolhido pela seleCao (R1)
+; R3: endereCo de barras de velocidades (sliders) de onde lemos qual o comboio (slider superior comboio azul/0) o sentido e velocidade
+; R4: registo com o valor da barra de velocidades
+; R5: mascara usada para filtrar bits desnecessarios antes de decidir o sentido do comboio
+; R6: registo com o valor de barra de velocidades para se usar no calculo do comboio 1 sem alterar o comboio 0
+; R7: mascara usada para filtrar bits desncessarios apos calculado o valor que vamos atribuir ao comboio
 ;*****************************************************************************************************************************************
 
 mover_comboios:
@@ -218,7 +221,7 @@ ler_velocidade_e_direcao_comboio1:
 MOV R6,R4								;copiar o valor para nao alterarmos este e podermos usar o R4 para calcular a velocidade do comboio 0
 SHR R6,4								;shift para a direita para usarmos apenas os bits de maior peso do comboio0 
 AND R6, R5								;filtrar com a mascara apenas os bits necessarios
-BIT R6, 3								;ler o bit 3 para ver a direcCao dele
+BIT R6, 3								;ler o bit 3 para ver a direcao dele
 JZ ler_velocidade_e_direcao_comboio0	;se o bit for 0, saltamos para o proximo comboio para nao por o sentido negativo
 
 por_sentido_negativo_do_comboio1:
@@ -227,8 +230,8 @@ ADD R6, R0								;poe o sentido negativo
 
 ler_velocidade_e_direcao_comboio0:
 AND R4, R5
-BIT R4, 3					;ler o bit 3 para ver a direcCao dele
-JZ escreve_comboio0			;se o bit for zero saltamos para nao por o sentido negativo
+BIT R4, 3					            ;ler o bit 3 para ver a direcao dele
+JZ escreve_comboio0			            ;se o bit for zero saltamos para nao por o sentido negativo
 
 por_sentido_negativo_do_comboio0:
 MOV R0, 80H 				
@@ -237,15 +240,15 @@ ADD R4, R0					;poe o bit a 1 para mudar o sentido
 
 escreve_comboio0: 
 AND R6,R7					;limpar os bits nao necessarios
-MOV R0,0H					;SelecCao do Comboio 0
+MOV R0,0H					;Selecao do Comboio 0
 MOVB [R1],R0				;escolher o comboio e operacao de mudar sentido
-MOVB [R2],R6				;escrever a mudanCa de sentido e velocidade
+MOVB [R2],R6				;escrever a mudanca de sentido e velocidade
 
 escreve_comboios1:
 AND R4,R7					;limpeza dos bits nao necessarios
-MOV R0,10H					;SelecCao do Comboio 1
+MOV R0,10H					;Selecao do Comboio 1
 MOVB [R1],R0				;escolher o comboio e a operacao de mudar sentido
-MOVB [R2],R4				;escrever a mudanCa de sentido e velocidade
+MOVB [R2],R4				;escrever a mudanca de sentido e velocidade
 
 fim_mover_comboio:
 POP R4
@@ -340,7 +343,7 @@ RET
 ;***************************************************************************************************************************
 ver_semaforo:
 PUSH R4
-MOV R5, cores_semaforos		; movemos o endereCo das cores_semaforos para o R5
+MOV R5, cores_semaforos		; movemos o endereco das cores_semaforos para o R5
 ADD R5, R4					; somamos o numero de bit que contamos para saber o semaforo a qual aceder
 MOV R7, R4					; guardar o valor de R4 
 SHL R7, 2					; shift em 2 bits do valor de R4 para se poder escrever no semaforo como numero do semaforo
@@ -349,7 +352,7 @@ RET
 
 ver_agulhas:
 PUSH R4
-MOV R5, estados_agulhas     ; movemos o endereCo dos estados_agulhas (tabela) para o R5
+MOV R5, estados_agulhas     ; movemos o endereco dos estados_agulhas (tabela) para o R5
 ADD R5, R4                  ; somamos o numero de bit que contamos para saber o agulha a qual aceder
 MOV R7, R4                  ; guardar o valor de R4 
 SHL R7, 2                   ; shift em 2 bits do valor de que era R4 para se poder escrever na agulha como numero do agulha
@@ -449,10 +452,10 @@ RET
 ; proximo_botao: passamos ao proximo botao ao fazer shift do valor para a direita e acrescentamos 1 ao contador (auxiliar dos semaforos)
 ; escrever_valor: escreve nas agulhas e na tabela os estados das agulhas
 ;
-; R0: valor no endereCo dos botoes de pressao
+; R0: valor no endereco dos botoes de pressao
 ; R1: endereCo dos Botoes de Pressao
 ; R2: - 
-; R3: e o endereCo onde vamos escrevever os valores para alterar o estado das agulhas
+; R3: e o endereco onde vamos escrevever os valores para alterar o estado das agulhas
 ; R4: e um contador que usamos para podermos ver de que agulha estamos a tratar conforme o numero de shifts feitos
 ; R5: endereco das tabelas com os estados das agulhas
 ; R7: temporario que esta 2 bits a esquerda para estar na posicao das agulhas para se escrever
@@ -517,11 +520,11 @@ RET
 ; Return: Nada
 ; 
 ; R0: temporario que recebe o valor 30H que transforma o valor de R6 em codigo ASCII que possa ser lido pelos LCDs como numeros
-; R1: EndereCo com a informaCao dos Sensores
+; R1: Endereco com a informacao dos Sensores
 ; R2: EndereCo do LCD superior (comboio 0)
 ; R3: EndereCo do LCD inferior (comboio 1)
-; R5: fica com o primeiro byte das informaCoes dos sensores, informaCao sobre qual comboio passou
-; R6: fica com o segundo byte das informaCoes dos sensores, o sensor pelo qual o comboio passou
+; R5: fica com o primeiro byte das informacoes dos sensores, informacao sobre qual comboio passou
+; R6: fica com o segundo byte das informacoes dos sensores, o sensor pelo qual o comboio passou
 ;***********************************************************************************************************************************
 
 sensores:
@@ -535,7 +538,7 @@ MOV R1, INFORMACAO_SENSORES
 MOV R2, LCD_SUPERIOR
 MOV R3, LCD_INFERIOR
 
-MOVB R5, [R1]               ;1º byte (informaCão sobre o comboio que passou)
+MOVB R5, [R1]               ;1º byte (informacão sobre o comboio que passou)
 MOVB R6, [R1]               ;2º byte (valor do sensor pelo qual passou)
 
 MOV R0, 30H                 ; somar 30H para transformar no ASCII code dos numeros 0-9
