@@ -30,14 +30,14 @@ LCD_INFERIOR  EQU 8002H				; endereco do LCD inferior
 NAO_HA_EVENTO EQU 0FFFFH            		; indica que não houve passagem por sensor
 
 
-VERDE    EQU 2H                 	; Valor da cor Verde no semaforo
-VERMELHO EQU 1H              		; Valor da cor Vermelha no semaforo
-CINZENTO EQU 0H              		; Valor da cor Cinzenta no semaforo
+VERDE    EQU 2H                 		; Valor da cor Verde no semaforo
+VERMELHO EQU 1H              			; Valor da cor Vermelha no semaforo
+CINZENTO EQU 0H              			; Valor da cor Cinzenta no semaforo
 
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H
 
-VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H ; valores atribuidos anteriormente (iniciados a 0)
+VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H 		; valores atribuidos anteriormente (iniciados a 0)
 VALOR_ANTERIOR_SEMAFOROS07    EQU 0H
 VALOR_ANTERIOR_SEMAFOROS89    EQU 0H
 VALOR_ANTERIOR_AGULHAS        EQU 0H
@@ -81,7 +81,7 @@ cores_semaforos:              ; tabela para as cores dos semáforos (VERDE, CINZ
     STRING    VERDE           ; cor do semáforo 8
     STRING    VERDE           ; cor do semáforo 9
 
-valores_anteriores:	      ;tabela com os valores anteriores para comparacao
+valores_anteriores:	      ; tabela com os valores anteriores para comparacao
 	
 	STRING      VALOR_ANTERIOR_MOVER_COMBOIOS
 	STRING      VALOR_ANTERIOR_SEMAFOROS07
