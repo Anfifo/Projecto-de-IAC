@@ -92,9 +92,9 @@ valores_anteriores:			  ;tabela com os valores anteriores para comparaCao
 ;******************************************************************************************************
 ; Programa para verificar se houve mudança aos comandos de leitura, se sim, entao inicializa-se a rotina 
 ;******************************************************************************************************
-PLACE 0H
-
+PLACE 0000H
 MOV SP, SP_inicial
+
 ;------------------------------------------------------------------------------------------------------
 start:
 
@@ -148,12 +148,10 @@ CALL agulhas                        ; caso haja mudanCa chamamos a rotina que tr
 
 
 ;--------------------------------------------------------------------------------------------------------
-verificar_mudanca_sensores:        ; iniciar a leitura dos sensores
+verificar_mudanca_sensores:        ; iniciar a leitura dos sensores caso haja pelo menos 1 evento
 MOV R2, NUMERO_EVENTOS_SENSORES
-MOV R0, NAO_HA_EVENTO              ;comparar, se for 0FFFFH (NAO HA EVENTO) nao ha evento
-CMP R2, R0                         ; se o numero de eventos for zero, nao iniciamos a leitura dos sensores
-JZ fim 
-CMP R2, 0H
+MOVB R3, [R2]
+CMP R3, 0H
 JZ fim
 
 CALL sensores 
@@ -166,16 +164,20 @@ fim: JMP start
 ; Rotina responsavel por mover para o Registo R3 e R4 os valores do endereço e o valor anterior da tabela respectiva depois comparar
 ;***************************************************************************************************************************************
 comparar:
+PUSH R0
 PUSH R1
 PUSH R2
 
 ADD R1,R0           ; soma o contador com o endereço das words para aceder a word desejada
 MOVB R3,[R2]        ; move o valor no endereço de que estamos a tratar 
 MOVB R4,[R1]        ; move o valor na tabela dos valores anteriores
-ADD R0,1H           ; aumenta o contador para aceder ao endereço 2 abaixo na proxima comparaCao (por ser uma word)
 
 POP R2
 POP R1
+POP R0
+
+ADD R0,1H           ; aumenta o contador para aceder ao endereço abaixo na proxima comparaCao
+
 RET
 
 ;****************************************************************************************************************************************
@@ -257,7 +259,7 @@ RET
 ; Rotinas Auxiliares: 
 ; ver_semaforo: calcula o valor a colocar no semaforo 
 ; proximo_botao: passamos ao proximo botao ao fazer shift do valor para a direita e acrescentamos 1 ao contador
-; escrever_semaforo: escreve no semaforo e na tabela os valores do semaforo para mudar a cor
+; escrever_valor: escreve no semaforo e na tabela os valores do semaforo para mudar a cor
 ;
 ; R0: valor no endereCo do teclado07
 ; R1: le o teclado de 0 a 7
@@ -306,7 +308,7 @@ por_semaforo_vermelho:
 MOV R8, VERMELHO
 
 escrever_o_valor_do_semaforo07:
-CALL escrever_semaforo
+CALL escrever_valor
 
 fim_semaforos07:
 POP R4
@@ -317,7 +319,7 @@ POP R0
 RET
 
 ;***************************************************************************************************************************
-; Rotinas auxiliares aos Semaforos
+; Rotinas auxiliares aos Semaforos e Agulhas
 ;***************************************************************************************************************************
 ver_semaforo:
 PUSH R4
@@ -328,17 +330,25 @@ SHL R7, 2					; shift em 2 bits do valor de R4 para se poder escrever no semafor
 POP R4
 RET
 
-proximo_botao:
-ADD R4, 1H				    ;incrementar 1 ao contador
-SHR R0, 1				    ;rodamos para passar ao proximo bit para testar
+ver_agulhas:
+PUSH R4
+MOV R5, estados_agulhas     ; movemos o endereço dos estados_agulhas (tabela) para o R5
+ADD R5, R4                  ; somamos o numero de bit que contamos para saber o agulha a qual aceder
+MOV R7, R4                  ; guardar o valor de R4 
+SHL R7, 2                   ; shift em 2 bits do valor de que era R4 para se poder escrever na agulha como numero do agulha
+POP R4
 RET
 
-escrever_semaforo:
+escrever_valor:
 MOVB [R5], R8				;escrever na tabela o sinal decidido 
 ADD R7, R8                  ;decide o sinal
 MOVB [R3], R7               ;escreve no semaforo
 RET
 
+proximo_botao:
+ADD R4, 1H                  ;incrementar 1 ao contador
+SHR R0, 1                   ;rodamos para passar ao proximo bit para testar
+RET
 
 ;***************************************************************************************************************************
 ; Semaforos de 8 a F
@@ -348,7 +358,7 @@ RET
 ; Rotinas Auxiliares: 
 ; ver_semaforo: calcula o valor a colocar no semaforo 
 ; proximo_botao: passamos ao proximo botao ao fazer shift do valor para a direita e acrescentamos 1 ao contador
-; escrever_semaforo: escreve no semaforo e na tabela os valores do semaforo para mudar a cor
+; escrever_valor: escreve no semaforo e na tabela os valores do semaforo para mudar a cor
 ;
 ; R0: valor no endereCo do teclado07
 ; R1: le o teclado de 0 a 7
@@ -376,7 +386,7 @@ JZ fim_semaforos07
 
 ler_botoes8F:
 BIT R0,0					;testar o bit 0 corresponde a ver se o botao foi carregado 
-JNZ mudar_semaforo8F			;se estiver a 1 o bit o botao foi premido entao vamos mudar a cor
+JNZ mudar_semaforo8F		;se estiver a 1 o bit o botao foi premido entao vamos mudar a cor
 CALL proximo_botao    		;caso contrario passamos ao proximo botao 
 JMP ler_botoes8F
 
@@ -396,7 +406,7 @@ por_semaforo_vermelho2:
 MOV R8, VERMELHO
 
 escrever_o_valor_do_semaforo8F:
-CALL escrever_semaforo
+CALL escrever_valor
 
 fim_semaforos8F:
 POP R4
@@ -413,8 +423,8 @@ RET
 ;
 ; Rotinas Auxiliares: 
 ; ver_agulhas: calcula o valor a colocar na agulha 
-; proximo_botao_agulhas: passamos ao proximo botao ao fazer shift do valor para a direita e acrescentamos 1 ao contador
-; escrever_agulhas: escreve nas agulhas e na tabela os estados das agulhas
+; proximo_botao: passamos ao proximo botao ao fazer shift do valor para a direita e acrescentamos 1 ao contador (auxiliar dos semaforos)
+; escrever_valor: escreve nas agulhas e na tabela os estados das agulhas
 ;
 ; R0: valor no endereCo dos botoes de pressao
 ; R1: endereCo dos Botoes de Pressao
@@ -445,7 +455,7 @@ JZ fim_agulhas                      ;se for 0 entao nao ha valores para atribuir
 ler_botoes_pressao:
 BIT R0,0                            ;testar o bit 0 corresponde a ver se o botao foi carregado 
 JNZ mudar_agulha                    ;se estiver a 1 o bit o botao foi premido entao vamos mudar o estado
-CALL proximo_botao_agulhas          ;caso contrario passamos ao proximo botao 
+CALL proximo_botao                  ;caso contrario passamos ao proximo botao 
 JMP ler_botoes_pressao
 
 mudar_agulha:
@@ -464,8 +474,8 @@ por_agulha_esquerda:
 MOV R8, ESQUERDA
 
 escrever_o_valor_do_agulhas:
-CALL escrever_agulhas
-RET
+CALL escrever_valor
+
 
 fim_agulhas:
 POP R4
@@ -474,30 +484,6 @@ POP R2
 POP R1
 POP R0
 RET
-
-;*******************************************************************************************************************************
-; Rotinas auxiliares as agulhas
-;*******************************************************************************************************************************
-ver_agulhas:
-PUSH R4
-MOV R5, estados_agulhas     ; movemos o endereço dos estados_agulhas (tabela) para o R5
-ADD R5, R4                  ; somamos o numero de bit que contamos para saber o agulha a qual aceder
-MOV R7, R4                  ; guardar o valor de R4 
-SHL R7, 2                   ; shift em 2 bits do valor de que era R4 para se poder escrever na agulha como numero do agulha
-POP R4
-RET
-
-proximo_botao_agulhas:
-ADD R4, 1H                   ;incrementar 1 ao contador
-SHR R0, 1                    ;rodamos para passar ao proximo bit para testar
-RET
-
-escrever_agulhas:
-MOVB [R5], R8                ;escrever na tabela o estado atribuido 
-ADD R7, R8                   ;decide a posiCao para que vai mudar
-MOVB [R3], R7                ;escreve na agulha
-RET
-
 
 ;**********************************************************************************************************************************
 ; Sensores
@@ -514,21 +500,24 @@ MOV R2, LCD_SUPERIOR
 MOV R3, LCD_INFERIOR
 
 MOVB R5, [R1]               ;1º byte (informação sobre o comboio que passou)
-MOVB R6, [R1]
-
+MOVB R6, [R1]               ;2º byte (valor do sensor pelo qual passou)
 
 MOV R0, 30H
 ADD R6,R0
 
-BIT R5, 0
+BIT R5, 0                   ; nao contamos o bit a 1 que e a parte de tras da carruagem 
+JNZ fim_sensores
+
+BIT R5, 1                   ; bit que diz qual o comboio 
 JZ sensor_comboio_0
 
+
 sensor_comboio_1:
-MOVB [R2], R6
+MOVB [R3], R6
 JMP fim_sensores
 
 sensor_comboio_0:
-MOVB [R3], R6
+MOVB [R2], R6
 
 fim_sensores:
 POP R4
