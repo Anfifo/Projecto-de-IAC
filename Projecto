@@ -23,10 +23,10 @@ AGULHAS         EQU 8016H			; de 7 a 2 numero agulha, 1-0 estado da agulha (01=l
 ESQUERDA        EQU 01H				; Valor do estado da agulha quando esta em modo "esquerda"
 DIREITA         EQU 02H				; Valor do estado da agulha quando esta em modo "direita"
 
-NUMERO_EVENTOS_SENSORES EQU 801CH	;cada evento corresponde a 2 valores no porto na INFORMACAO_SENSORES
+NUMERO_EVENTOS_SENSORES EQU 801CH	; cada evento corresponde a 2 valores no porto na INFORMACAO_SENSORES
 INFORMACAO_SENSORES     EQU 801EH
-LCD_SUPERIOR  EQU 8000H				;endereCo do LCD superior
-LCD_INFERIOR  EQU 8002H				;endereCo do LCD inferior
+LCD_SUPERIOR  EQU 8000H				; endereCo do LCD superior
+LCD_INFERIOR  EQU 8002H				; endereCo do LCD inferior
 NAO_HA_EVENTO EQU 0FFFFH            ; indica que não houve passagem por sensor
 
 
@@ -44,13 +44,17 @@ VALOR_ANTERIOR_AGULHAS        EQU 0H
 VALOR_ANTERIOR_SENSOR         EQU 0H
 
 ;*****************************************************************************************************************
-;Tabelas
+; Tabelas
 ;*****************************************************************************************************************
-;pilha: usada para o stack point
-;estados das agulhas: usada para saber a que estado estao as agulhas no momento presente (apos movimento)
-;cores semaforos: usada para saber a que estado/cor estao os semaforos no momento presente(apos mudança de cor)
-;valores anteriores: usada para saber qual o valor anteriormente lido para apenas aplicar mudança se for diferente
+; pilha: usada para o stack pointer
+;
+; estados das agulhas: usada para saber a que estado estao as agulhas no momento presente (apos movimento)
+;
+; cores semaforos: usada para saber a que estado/cor estao os semaforos no momento presente(apos mudanCa de cor)
+;
+; valores anteriores: usada para saber qual o valor anteriormente lido para apenas aplicar mudanCa se for diferente
 ;******************************************************************************************************************
+
 PLACE     1000H
 
 pilha:		TABLE 100H	      ; espaCo reservado para a pilha (200H bytes, pois sao 100H words)
@@ -58,7 +62,7 @@ SP_inicial:				      ; este e o endereCo (1200H) com que o SP deve ser inicializ
                               ; O 1º end. de retorno será armazenado em 11FEH (1200H-2)
 
 estados_agulhas:              ; tabela para os estados das agulhas (DIREITA e ESQUERDA).
-                              ; 00 cinzento, 01 ESQUERDA, 10 DIREITA, 11 amarelo.
+                              ; 01 ESQUERDA, 10 DIREITA
     STRING    DIREITA         ; agulha 0
     STRING    DIREITA         ; agulha 1
     STRING    DIREITA         ; agulha 2
@@ -83,15 +87,14 @@ valores_anteriores:			  ;tabela com os valores anteriores para comparaCao
 	STRING      VALOR_ANTERIOR_SEMAFOROS07
 	STRING      VALOR_ANTERIOR_SEMAFOROS89
 	STRING      VALOR_ANTERIOR_AGULHAS
-	STRING      VALOR_ANTERIOR_SENSOR
 
 
 
-;******************************************************************************************************
+;*******************************************************************************************************
 ; Programa Principal
-;******************************************************************************************************
-; Programa para verificar se houve mudança aos comandos de leitura, se sim, entao inicializa-se a rotina 
-;******************************************************************************************************
+;*******************************************************************************************************
+; Programa para verificar se houve mudanCa aos comandos de leitura, se sim, entao inicializa-se a rotina 
+;*******************************************************************************************************
 PLACE 0000H
 MOV SP, SP_inicial
 
@@ -99,51 +102,47 @@ MOV SP, SP_inicial
 start:
 
 MOV R0,0H 					         ; contador para aceder a tabela 
-MOV R1,valores_anteriores            ; endereço com a tabela dos valores anteriores
+MOV R1,valores_anteriores            ; endereCo com a tabela dos valores anteriores
 
 ;------------------------------------------------------------------------------------------------------
 verificar_mudanca_mover_comboios:    ; verificar se houve mudanCa dos valores nos sliders
 MOV R2, BARRAS_VELOCIDADE
-CALL comparar
+CALL antes_de_comparar
 
 CMP R3,R4
 JZ verificar_mudanca_semaforos07     ; caso nao haja mudanCa saltamos para o teclado 
 
-MOVB [R1], R3
 CALL mover_comboios                  ; caso haja mudanCa chamamos a rotina que trata de mover os comboios
 
 ;-------------------------------------------------------------------------------------------------------
 verificar_mudanca_semaforos07:       ; verificar se houve mudanCa dos valores do teclado 0 a 7
 MOV R2, TECLADO07
-CALL comparar
+CALL antes_de_comparar
 
 CMP R3,R4
 JZ verificar_mudanca_semaforos8F     ; caso nao haja mudanCa saltamos para o teclado 8 a F 
 
-MOVB [R1], R3
 CALL semaforos07                     ; caso haja mudanCa chamamos a rotina que trata dos semaforos 0 a 7
 
 ;--------------------------------------------------------------------------------------------------------
 verificar_mudanca_semaforos8F:       ; verificar se houve mudanCa dos valores no teclado 8 a F
 
 MOV R2, TECLADO8F
-CALL comparar
+CALL antes_de_comparar
 
 CMP R3,R4
 JZ verificar_mudanca_agulhas        ; caso nao haja mudanCa saltamos para os botoes de Pressao
 
-MOVB [R1], R3
 CALL semaforos8F                    ; caso haja mudanCa chamamos a rotina que trata dos semaforos 8 e 9
 
 ;--------------------------------------------------------------------------------------------------------
 verificar_mudanca_agulhas:          ; verificar se houve mudanCa dos valores dos botoes de Pressao
 MOV R2, BOTOES_PRESSAO
-CALL comparar
+CALL antes_de_comparar
 
 CMP R3,R4
 JZ verificar_mudanca_sensores       ; caso nao haja mudanCa saltamos para os Sensores
 
-MOVB [R1], R3
 CALL agulhas                        ; caso haja mudanCa chamamos a rotina que trata das agulhas
 
 
@@ -159,25 +158,30 @@ CALL sensores
 fim: JMP start
 
 ;**************************************************************************************************************************************
-; Rotinas Auxiliares ao Programa Principal
+; Rotina Auxiliares ao Programa Principal
 ;**************************************************************************************************************************************
-; Rotina responsavel por mover para o Registo R3 e R4 os valores do endereço e o valor anterior da tabela respectiva depois comparar
+; Rotina responsavel por mover para o Registo R3 e R4 os valores do endereCo e o valor anterior da tabela respectiva depois de comparar
+;
+; antes_de_comparar: 
+; Argumentos: R0 (contador), R2 (endereCo do valor atual ), R1 (com o endereCo do valor anterior)
+; Retorna: R3 (com o valor [R2]) , R4 (com o valor [R1])
+;
 ;***************************************************************************************************************************************
-comparar:
+antes_de_comparar:
 PUSH R0
 PUSH R1
 PUSH R2
 
-ADD R1,R0           ; soma o contador com o endereço das words para aceder a word desejada
-MOVB R3,[R2]        ; move o valor no endereço de que estamos a tratar 
+ADD R1,R0           ; soma o contador com o endereCo das words para aceder a word desejada
+MOVB R3,[R2]        ; move o valor no endereCo de que estamos a tratar 
 MOVB R4,[R1]        ; move o valor na tabela dos valores anteriores
+MOVB [R1], R3       ; escrever na tabela o valor atual para ser usada para a proxima
 
 POP R2
 POP R1
 POP R0
 
-ADD R0,1H           ; aumenta o contador para aceder ao endereço abaixo na proxima comparaCao
-
+ADD R0,1H           ; aumenta o contador para aceder ao endereCo abaixo na proxima comparaCao
 RET
 
 ;****************************************************************************************************************************************
@@ -185,9 +189,9 @@ RET
 ;****************************************************************************************************************************************
 ;Programa responsavel pelo movimento dos comboios consoante a barra de velocidades (slider/R3)
 ;
-;R1: endereço de seleCao de comboios usado para escolher o comboio e operaCao executada (mudar sentido)
-;R2: endereço de operaCao comboio usado para escrever a velocidade e sentido do comboio escolhido pela seleCao (R1)
-;R3: endereço de barras de velocidades (sliders) de onde lemos qual o comboio (slider superior comboio azul/0) o sentido e velocidade
+;R1: endereCo de seleCao de comboios usado para escolher o comboio e operaCao executada (mudar sentido)
+;R2: endereCo de operaCao comboio usado para escrever a velocidade e sentido do comboio escolhido pela seleCao (R1)
+;R3: endereCo de barras de velocidades (sliders) de onde lemos qual o comboio (slider superior comboio azul/0) o sentido e velocidade
 ;R4: registo com o valor da barra de velocidades
 ;R5: mascara usada para filtrar bits desnecessarios antes de decidir o sentido do comboio
 ;R6: registo com o valor de barra de velocidades para se usar no calculo do comboio 1 sem alterar o comboio 0
@@ -254,7 +258,7 @@ RET
 ;**********************************************************************************************************************
 ; Semaforos de 0 a 8
 ;**********************************************************************************************************************
-; Programa responsavel pela cor dos semaforos de 0 a 7 atraves dos botoes do teclado de 0 a 7 (Verde/Vermelho)
+; Processo responsavel pela cor dos semaforos de 0 a 7 atraves dos botoes do teclado de 0 a 7 (Verde/Vermelho)
 ;
 ; Rotinas Auxiliares: 
 ; ver_semaforo: calcula o valor a colocar no semaforo 
@@ -321,9 +325,22 @@ RET
 ;***************************************************************************************************************************
 ; Rotinas auxiliares aos Semaforos e Agulhas
 ;***************************************************************************************************************************
+; ver_semaforo:
+;     Argumentos: R4 (contador)            Retorna: R7 (que vem de R4+R5 seguido de um shift para a esquerda)
+;
+; ver_agulhas:
+;     Argumentos: R4 (contador)            Retorna: R7 (que vem de R4+R5 seguido de um shift para a esquerda)
+;
+; escrever_valor:
+;     Argumentos: R8 (valor a escrever)    Retorna: nada
+;
+; proximo_botao:
+;     Argumentos: R4(contador), R0(valor)  Retorna: R4+1(incrementa o contador),  R0->1 (faz um shift right)
+;
+;***************************************************************************************************************************
 ver_semaforo:
 PUSH R4
-MOV R5, cores_semaforos		; movemos o endereço das cores_semaforos para o R5
+MOV R5, cores_semaforos		; movemos o endereCo das cores_semaforos para o R5
 ADD R5, R4					; somamos o numero de bit que contamos para saber o semaforo a qual aceder
 MOV R7, R4					; guardar o valor de R4 
 SHL R7, 2					; shift em 2 bits do valor de R4 para se poder escrever no semaforo como numero do semaforo
@@ -332,7 +349,7 @@ RET
 
 ver_agulhas:
 PUSH R4
-MOV R5, estados_agulhas     ; movemos o endereço dos estados_agulhas (tabela) para o R5
+MOV R5, estados_agulhas     ; movemos o endereCo dos estados_agulhas (tabela) para o R5
 ADD R5, R4                  ; somamos o numero de bit que contamos para saber o agulha a qual aceder
 MOV R7, R4                  ; guardar o valor de R4 
 SHL R7, 2                   ; shift em 2 bits do valor de que era R4 para se poder escrever na agulha como numero do agulha
@@ -353,7 +370,10 @@ RET
 ;***************************************************************************************************************************
 ; Semaforos de 8 a F
 ;***************************************************************************************************************************
-; Programa responsavel por escrever os valores dos semaforos 8 e 9 consoante os botoes 8 e 9 do teclado
+; Processo responsavel por escrever os valores dos semaforos 8 e 9 consoante os botoes 8 e 9 do teclado
+;
+; Argumentos: Nenhum
+; Retorna: Nada
 ;
 ; Rotinas Auxiliares: 
 ; ver_semaforo: calcula o valor a colocar no semaforo 
@@ -417,9 +437,12 @@ POP R0
 RET
 
 ;****************************************************************************************************************************
-;agulhas
+; Agulhas
 ;****************************************************************************************************************************
 ; Processo responsavel por alterar os valores das agulhas consoante os botoes botoes de pressao 0-3
+;
+; Argumentos: Nenhum 
+; Retorna: Nada 
 ;
 ; Rotinas Auxiliares: 
 ; ver_agulhas: calcula o valor a colocar na agulha 
@@ -488,6 +511,19 @@ RET
 ;**********************************************************************************************************************************
 ; Sensores
 ;**********************************************************************************************************************************
+; Processo responsavel pela leitura dos Sensores que transmite ao LCD o sensor por qual cada comboio passou. 
+; 
+; Argumentos: Nenhum
+; Return: Nada
+; 
+; R0: temporario que recebe o valor 30H que transforma o valor de R6 em codigo ASCII que possa ser lido pelos LCDs como numeros
+; R1: EndereCo com a informaCao dos Sensores
+; R2: EndereCo do LCD superior (comboio 0)
+; R3: EndereCo do LCD inferior (comboio 1)
+; R5: fica com o primeiro byte das informaCoes dos sensores, informaCao sobre qual comboio passou
+; R6: fica com o segundo byte das informaCoes dos sensores, o sensor pelo qual o comboio passou
+;***********************************************************************************************************************************
+
 sensores:
 PUSH R0
 PUSH R1
@@ -499,10 +535,10 @@ MOV R1, INFORMACAO_SENSORES
 MOV R2, LCD_SUPERIOR
 MOV R3, LCD_INFERIOR
 
-MOVB R5, [R1]               ;1º byte (informação sobre o comboio que passou)
+MOVB R5, [R1]               ;1º byte (informaCão sobre o comboio que passou)
 MOVB R6, [R1]               ;2º byte (valor do sensor pelo qual passou)
 
-MOV R0, 30H
+MOV R0, 30H                 ; somar 30H para transformar no ASCII code dos numeros 0-9
 ADD R6,R0
 
 BIT R5, 0                   ; nao contamos o bit a 1 que e a parte de tras da carruagem 
