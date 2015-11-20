@@ -5,6 +5,18 @@
 ;* Isabel Dias       84726    *;
 ;******************************;
 
+;************************************************************************************
+; Informacao do Codigo:
+;
+; Geralmente: 
+; R0: corresponde a o endereco de escrita (W) 
+; R1: 
+; R2:
+; R3:
+; R4: corresponde a um contador que conta um certo numero de accoes 
+; R5:
+; R6:
+; R7:
 
 ;*************************************************************************************
 ; Constantes 
@@ -12,32 +24,32 @@
 
 SELECAO_COMBOIO     EQU 8018H
 OPERACAO_COMBOIO    EQU 801AH
-BARRAS_VELOCIDADE   EQU 8004H	
+BARRAS_VELOCIDADE   EQU 8004H   
 
-TECLADO07 EQU 8006H		     		; cada posicao do bit corresponde a um semaforo 7654 3210
-TECLADO8F EQU 8008H		     		; cada posicao do bit corresponde a um semaforo **** **98
-SEMAFOROS EQU 8012H		     		; Os bits 7 a 2 indicam o número do semáforo1. Os bits 1 e 0 indicam a cor
+TECLADO07 EQU 8006H                         ; cada posicao do bit corresponde a um semaforo 7654 3210
+TECLADO8F EQU 8008H                         ; cada posicao do bit corresponde a um semaforo **** **98
+SEMAFOROS EQU 8012H                         ; Os bits 7 a 2 indicam o número do semáforo1. Os bits 1 e 0 indicam a cor
 
-BOTOES_PRESSAO  EQU 800CH			; 1 on, 0 off
-AGULHAS         EQU 8016H			; de 7 a 2 numero agulha, 1-0 estado da agulha (01=liga para a esquerda 10=liga para a direita, 00 e 11 indefinido )
-ESQUERDA        EQU 01H				; Valor do estado da agulha quando esta em modo "esquerda"
-DIREITA         EQU 02H				; Valor do estado da agulha quando esta em modo "direita"
+BOTOES_PRESSAO  EQU 800CH                   ; 1 on, 0 off
+AGULHAS         EQU 8016H                   ; de 7 a 2 numero agulha, 1-0 estado da agulha (01=liga para a esquerda 10=liga para a direita, 00 e 11 indefinido )
+ESQUERDA        EQU 01H                     ; Valor do estado da agulha quando esta em modo "esquerda"
+DIREITA         EQU 02H                     ; Valor do estado da agulha quando esta em modo "direita"
 
-NUMERO_EVENTOS_SENSORES EQU 801CH		; cada evento corresponde a 2 valores no porto na INFORMACAO_SENSORES
+NUMERO_EVENTOS_SENSORES EQU 801CH           ; cada evento corresponde a 2 valores no porto na INFORMACAO_SENSORES
 INFORMACAO_SENSORES     EQU 801EH
-LCD_SUPERIOR  EQU 8000H				; endereco do LCD superior
-LCD_INFERIOR  EQU 8002H				; endereco do LCD inferior
-NAO_HA_EVENTO EQU 0FFFFH            		; indica que não houve passagem por sensor
+LCD_SUPERIOR  EQU 8000H                     ; endereco do LCD superior
+LCD_INFERIOR  EQU 8002H                     ; endereco do LCD inferior
+NAO_HA_EVENTO EQU 0FFFFH                    ; indica que não houve passagem por sensor
 
 
-VERDE    EQU 2H                 		; Valor da cor Verde no semaforo
-VERMELHO EQU 1H              			; Valor da cor Vermelha no semaforo
-CINZENTO EQU 0H              			; Valor da cor Cinzenta no semaforo
+VERDE    EQU 2H                             ; Valor da cor Verde no semaforo
+VERMELHO EQU 1H                             ; Valor da cor Vermelha no semaforo
+CINZENTO EQU 0H                             ; Valor da cor Cinzenta no semaforo
 
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H
 
-VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H 		; valores atribuidos anteriormente (iniciados a 0)
+VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H        ; valores atribuidos anteriormente (iniciados a 0)
 VALOR_ANTERIOR_SEMAFOROS07    EQU 0H
 VALOR_ANTERIOR_SEMAFOROS89    EQU 0H
 VALOR_ANTERIOR_AGULHAS        EQU 0H
@@ -57,36 +69,36 @@ VALOR_ANTERIOR_SENSOR         EQU 0H
 
 PLACE     1000H
 
-pilha:		TABLE 100H    ; espaco reservado para a pilha (200H bytes, pois sao 100H words)
-SP_inicial:		      ; este e o endereco (1200H) com que o SP deve ser inicializado.
-                              ; O 1º end. de retorno será armazenado em 11FEH (1200H-2H)
+pilha:      TABLE 100H                      ; espaco reservado para a pilha (200H bytes, pois sao 100H words)
+SP_inicial:                                 ; este e o endereco (1200H) com que o SP deve ser inicializado.
+                                            ; O 1º end. de retorno será armazenado em 11FEH (1200H-2H)
 
-estados_agulhas:              ; tabela para os estados das agulhas (DIREITA e ESQUERDA).
-                              ; 01 ESQUERDA, 10 DIREITA
-    STRING    DIREITA         ; agulha 0
-    STRING    DIREITA         ; agulha 1
-    STRING    DIREITA         ; agulha 2
-    STRING    DIREITA         ; agulha 3
+estados_agulhas:                            ; tabela para os estados das agulhas (DIREITA e ESQUERDA).
+                                            ; 01 ESQUERDA, 10 DIREITA
+    STRING    DIREITA                       ; agulha 0
+    STRING    DIREITA                       ; agulha 1
+    STRING    DIREITA                       ; agulha 2
+    STRING    DIREITA                       ; agulha 3
 
-cores_semaforos:              ; tabela para as cores dos semáforos (VERDE, CINZENTO ou VERMELHO).
-                              ; 00 cinzento, 01 vermelho, 10 verde, 11 amarelo.
-    STRING    VERDE           ; cor do semáforo 0
-    STRING    VERDE           ; cor do semáforo 1
-    STRING    VERDE           ; cor do semáforo 2
-    STRING    VERDE           ; cor do semáforo 3
-    STRING    VERDE           ; cor do semáforo 4
-    STRING    VERDE           ; cor do semáforo 5
-    STRING    VERDE           ; cor do semáforo 6
-    STRING    VERDE           ; cor do semáforo 7
-    STRING    VERDE           ; cor do semáforo 8
-    STRING    VERDE           ; cor do semáforo 9
+cores_semaforos:                            ; tabela para as cores dos semáforos (VERDE, CINZENTO ou VERMELHO).
+                                            ; 00 cinzento, 01 vermelho, 10 verde, 11 amarelo.
+    STRING    VERDE                         ; cor do semáforo 0
+    STRING    VERDE                         ; cor do semáforo 1
+    STRING    VERDE                         ; cor do semáforo 2
+    STRING    VERDE                         ; cor do semáforo 3
+    STRING    VERDE                         ; cor do semáforo 4
+    STRING    VERDE                         ; cor do semáforo 5
+    STRING    VERDE                         ; cor do semáforo 6
+    STRING    VERDE                         ; cor do semáforo 7
+    STRING    VERDE                         ; cor do semáforo 8
+    STRING    VERDE                         ; cor do semáforo 9
 
-valores_anteriores:	      ; tabela com os valores anteriores para comparacao
-	
-	STRING      VALOR_ANTERIOR_MOVER_COMBOIOS
-	STRING      VALOR_ANTERIOR_SEMAFOROS07
-	STRING      VALOR_ANTERIOR_SEMAFOROS89
-	STRING      VALOR_ANTERIOR_AGULHAS
+valores_anteriores:                         ; tabela com os valores anteriores para comparacao
+    
+    STRING      VALOR_ANTERIOR_MOVER_COMBOIOS
+    STRING      VALOR_ANTERIOR_SEMAFOROS07
+    STRING      VALOR_ANTERIOR_SEMAFOROS89
+    STRING      VALOR_ANTERIOR_AGULHAS
 
 
 
@@ -101,53 +113,53 @@ MOV SP, SP_inicial
 ;------------------------------------------------------------------------------------------------------
 start:
 
-MOV R0,0H 			     ; contador para aceder a tabela 
-MOV R1,valores_anteriores            ; endereco com a tabela dos valores anteriores
+MOV R0,0H                                   ; contador para aceder a tabela 
+MOV R1,valores_anteriores                   ; endereco com a tabela dos valores anteriores
 
 ;------------------------------------------------------------------------------------------------------
-verificar_mudanca_mover_comboios:    ; verificar se houve mudanca nos valores dos sliders
+verificar_mudanca_mover_comboios:           ; verificar se houve mudanca nos valores dos sliders
 MOV R2, BARRAS_VELOCIDADE
 CALL antes_de_comparar
 
 CMP R3,R4
-JZ verificar_mudanca_semaforos07     ; caso nao haja mudanca saltamos para o teclado 
+JZ verificar_mudanca_semaforos07            ; caso nao haja mudanca saltamos para o teclado 
 
-CALL mover_comboios                  ; caso haja mudanca chamamos a rotina que trata de mover os comboios
+CALL mover_comboios                         ; caso haja mudanca chamamos a rotina que trata de mover os comboios
 
 ;-------------------------------------------------------------------------------------------------------
-verificar_mudanca_semaforos07:       ; verificar se houve mudanca nos valores do teclado 0 a 7
+verificar_mudanca_semaforos07:              ; verificar se houve mudanca nos valores do teclado 0 a 7
 MOV R2, TECLADO07
 CALL antes_de_comparar
 
 CMP R3,R4
-JZ verificar_mudanca_semaforos8F     ; caso nao haja mudanca saltamos para o teclado 8 a F 
+JZ verificar_mudanca_semaforos8F            ; caso nao haja mudanca saltamos para o teclado 8 a F 
 
-CALL semaforos07                     ; caso haja mudanca chamamos a rotina que trata dos semaforos 0 a 7
+CALL semaforos07                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 0 a 7
 
 ;--------------------------------------------------------------------------------------------------------
-verificar_mudanca_semaforos8F:       ; verificar se houve mudanca dos valores no teclado 8 a F
+verificar_mudanca_semaforos8F:              ; verificar se houve mudanca dos valores no teclado 8 a F
 
 MOV R2, TECLADO8F
 CALL antes_de_comparar
 
 CMP R3,R4
-JZ verificar_mudanca_agulhas        ; caso nao haja mudanca saltamos para os botoes de Pressao
+JZ verificar_mudanca_agulhas                ; caso nao haja mudanca saltamos para os botoes de Pressao
 
-CALL semaforos8F                    ; caso haja mudanca chamamos a rotina que trata dos semaforos 8 e 9
+CALL semaforos8F                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 8 e 9
 
 ;--------------------------------------------------------------------------------------------------------
-verificar_mudanca_agulhas:          ; verificar se houve mudanca nos valores dos botoes de Pressao
+verificar_mudanca_agulhas:                  ; verificar se houve mudanca nos valores dos botoes de Pressao
 MOV R2, BOTOES_PRESSAO
 CALL antes_de_comparar
 
 CMP R3,R4
-JZ verificar_mudanca_sensores       ; caso nao haja mudanca saltamos para os Sensores
+JZ verificar_mudanca_sensores               ; caso nao haja mudanca saltamos para os Sensores
 
-CALL agulhas                        ; caso haja mudanca chamamos a rotina que trata das agulhas
+CALL agulhas                                ; caso haja mudanca chamamos a rotina que trata das agulhas
 
 
 ;--------------------------------------------------------------------------------------------------------
-verificar_mudanca_sensores:        ; iniciar a leitura dos sensores caso haja pelo menos 1 evento
+verificar_mudanca_sensores:                 ; iniciar a leitura dos sensores caso haja pelo menos 1 evento
 MOV R2, NUMERO_EVENTOS_SENSORES
 MOVB R3, [R2]
 CMP R3, 0H
@@ -172,16 +184,16 @@ PUSH R0
 PUSH R1
 PUSH R2
 
-ADD R1,R0           ; soma o contador com o endereco das words para aceder a word desejada
-MOVB R3,[R2]        ; move o valor no endereco de que estamos a tratar 
-MOVB R4,[R1]        ; move o valor na tabela dos valores anteriores
-MOVB [R1], R3       ; escreve na tabela o valor atual para ser usada para a proxima
+ADD R1,R0                                   ; soma o contador com o endereco das words para aceder a word desejada
+MOVB R3,[R2]                                ; move o valor no endereco de que estamos a tratar 
+MOVB R4,[R1]                                ; move o valor na tabela dos valores anteriores
+MOVB [R1], R3                               ; escreve na tabela o valor atual para ser usada para a proxima
 
 POP R2
 POP R1
 POP R0
 
-ADD R0,1H           ; aumenta o contador para aceder ao endereco abaixo na proxima comparacao
+ADD R0,1H                                   ; aumenta o contador para aceder ao endereco abaixo na proxima comparacao
 RET
 
 ;****************************************************************************************************************************************
@@ -218,37 +230,37 @@ MOV R7, MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
 
 
 ler_velocidade_e_direcao_comboio1:
-MOV R6,R4								; copiar o valor para nao o alterarmos e podermos usar o R4 para calcular a velocidade do comboio 0
-SHR R6,4								; shift para a direita para usarmos apenas os bits de maior peso do comboio 0 
-AND R6, R5								; filtrar com a mascara apenas os bits necessarios
-BIT R6, 3								; ler o bit 3 para ver a sua direcao
-JZ ler_velocidade_e_direcao_comboio0					; se o bit for 0, saltamos para o proximo comboio para nao por o seu sentido negativo
+MOV R6,R4                                   ; copiar o valor para nao o alterarmos e podermos usar o R4 para calcular a velocidade do comboio 0
+SHR R6,4                                    ; shift para a direita para usarmos apenas os bits de maior peso do comboio 0 
+AND R6, R5                                  ; filtrar com a mascara apenas os bits necessarios
+BIT R6, 3                                   ; ler o bit 3 para ver a sua direcao
+JZ ler_velocidade_e_direcao_comboio0        ; se o bit for 0, saltamos para o proximo comboio para nao por o seu sentido negativo
 
 por_sentido_negativo_do_comboio1:
-MOV R0, 80H 					
-ADD R6, R0								; poe o sentido negativo
+MOV R0, 80H                     
+ADD R6, R0                                  ; poe o sentido negativo
 
 ler_velocidade_e_direcao_comboio0:
 AND R4, R5
-BIT R4, 3					            		; ler o bit 3 para ver a direcao dele
-JZ escreve_comboio0			            			; se o bit for zero saltamos para nao por o seu sentido negativo
+BIT R4, 3                                   ; ler o bit 3 para ver a direcao dele
+JZ escreve_comboio0                         ; se o bit for zero saltamos para nao por o seu sentido negativo
 
 por_sentido_negativo_do_comboio0:
-MOV R0, 80H 				
-ADD R4, R0								; poe o bit a 1 para mudar o sentido
+MOV R0, 80H                 
+ADD R4, R0                                  ; poe o bit a 1 para mudar o sentido
 
 
 escreve_comboio0: 
-AND R6,R7								; limpar os bits nao necessarios
-MOV R0,0H								; selecao do comboio 0
-MOVB [R1],R0								; escolher o comboio e operacao de mudar sentido
-MOVB [R2],R6								; escrever a mudanca de sentido e velocidade
+AND R6,R7                                   ; limpar os bits nao necessarios
+MOV R0,0H                                   ; selecao do comboio 0
+MOVB [R1],R0                                ; escolher o comboio e operacao de mudar sentido
+MOVB [R2],R6                                ; escrever a mudanca de sentido e velocidade
 
 escreve_comboios1:
-AND R4,R7								; limpeza dos bits nao necessarios
-MOV R0,10H								; selecao do comboio 1
-MOVB [R1],R0								; escolher o comboio e a operacao de mudar sentido
-MOVB [R2],R4								; escrever a mudanca de sentido e velocidade
+AND R4,R7                                   ; limpeza dos bits nao necessarios
+MOV R0,10H                                  ; selecao do comboio 1
+MOVB [R1],R0                                ; escolher o comboio e a operacao de mudar sentido
+MOVB [R2],R4                                ; escrever a mudanca de sentido e velocidade
 
 fim_mover_comboio:
 POP R4
@@ -287,16 +299,16 @@ PUSH R4
 
 MOV R1, TECLADO07
 MOV R3, SEMAFOROS
-MOV R4, 0H						; inicializar o contador a 0 
-MOVB R0, [R1]						; mover os valores do teclado para R1
+MOV R4, 0H                                  ; inicializar o contador a 0 
+MOVB R0, [R1]                               ; mover os valores do teclado para R1
 
 CMP R0, 0
 JZ fim_semaforos07
 
 ler_botoes07:
-BIT R0,0						; testar o bit 0 que corresponde a verificar se o botao foi carregado 
-JNZ mudar_semaforo					; se o bit estiver a 1 o botao foi premido portanto vamos mudar a cor
-CALL proximo_botao    					; caso contrario passamos ao proximo botao 
+BIT R0,0                                    ; testar o bit 0 que corresponde a verificar se o botao foi carregado 
+JNZ mudar_semaforo                          ; se o bit estiver a 1 o botao foi premido portanto vamos mudar a cor
+CALL proximo_botao                          ; caso contrario passamos ao proximo botao 
 JMP ler_botoes07
 
 mudar_semaforo:
@@ -304,7 +316,7 @@ CALL ver_semaforo
 
 ver_cor_da_tabela:
 MOVB R8, [R5]
-CMP R8, VERDE 						; se for verde, muda para vermelho.
+CMP R8, VERDE                               ; se for verde, muda para vermelho.
 JZ por_semaforo_vermelho
 
 por_semaforo_verde:
@@ -343,31 +355,31 @@ RET
 ;***************************************************************************************************************************
 ver_semaforo:
 PUSH R4
-MOV R5, cores_semaforos				; movemos o endereco das cores_semaforos para o R5
-ADD R5, R4					; somamos o numero de bits que contamos para saber o semaforo a qual aceder
-MOV R7, R4					; guardar o valor de R4 
-SHL R7, 2					; shift em 2 bits do valor de R4 para se poder escrever no semaforo como numero do semaforo
+MOV R5, cores_semaforos                     ; movemos o endereco das cores_semaforos para o R5
+ADD R5, R4                                  ; somamos o numero de bits que contamos para saber o semaforo a qual aceder
+MOV R7, R4                                  ; guardar o valor de R4 
+SHL R7, 2                                   ; shift em 2 bits do valor de R4 para se poder escrever no semaforo como numero do semaforo
 POP R4
 RET
 
 ver_agulhas:
 PUSH R4
-MOV R5, estados_agulhas     			; movemos o endereco dos estados_agulhas (tabela) para o R5
-ADD R5, R4                  			; somamos o numero de bits que contamos para saber a agulha a qual aceder
-MOV R7, R4                  			; guardar o valor de R4 
-SHL R7, 2                   			; shift em 2 bits do valor de que estava em R4 para o poder escrever como o numero da agulha
+MOV R5, estados_agulhas                     ; movemos o endereco dos estados_agulhas (tabela) para o R5
+ADD R5, R4                                  ; somamos o numero de bits que contamos para saber a agulha a qual aceder
+MOV R7, R4                                  ; guardar o valor de R4 
+SHL R7, 2                                   ; shift em 2 bits do valor de que estava em R4 para o poder escrever como o numero da agulha
 POP R4
 RET
 
 escrever_valor:
-MOVB [R5], R8					; escrever na tabela o sinal decidido 
-ADD R7, R8                  			; decide o sinal
-MOVB [R3], R7               			; escreve no semaforo
+MOVB [R5], R8                               ; escrever na tabela o sinal decidido 
+ADD R7, R8                                  ; decide o sinal
+MOVB [R3], R7                               ; escreve no semaforo
 RET
 
 proximo_botao:
-ADD R4, 1H                  			; incrementar 1 ao contador
-SHR R0, 1                   			; rodamos para passar ao proximo bit para testar
+ADD R4, 1H                                  ; incrementar 1 ao contador
+SHR R0, 1                                   ; rodamos para passar ao proximo bit para testar
 RET
 
 ;***************************************************************************************************************************
@@ -401,16 +413,16 @@ PUSH R4
 
 MOV R2, TECLADO8F
 MOV R3, SEMAFOROS
-MOV R4, 8H                  			; inicializar o contador a 0 
-MOVB R0, [R2]               			; mover os valores do teclado para R1
+MOV R4, 8H                                  ; inicializar o contador a 0 
+MOVB R0, [R2]                               ; mover os valores do teclado para R1
 
 CMP R0, 0
 JZ fim_semaforos07
 
 ler_botoes8F:
-BIT R0,0					; testar o bit 0 que corresponde a verificar se o botao foi carregado 
-JNZ mudar_semaforo8F				; se o bit estiver a 1, o botao foi premido portanto vamos mudar a cor
-CALL proximo_botao    				; caso contrario passamos ao proximo botao 
+BIT R0,0                                    ; testar o bit 0 que corresponde a verificar se o botao foi carregado 
+JNZ mudar_semaforo8F                        ; se o bit estiver a 1, o botao foi premido portanto vamos mudar a cor
+CALL proximo_botao                          ; caso contrario passamos ao proximo botao 
 JMP ler_botoes8F
 
 mudar_semaforo8F:
@@ -418,7 +430,7 @@ CALL ver_semaforo
 
 ver_cor_da_tabela8F:
 MOVB R8, [R5]
-CMP R8, CINZENTO               			; se for Cinzento, muda para vermelho.
+CMP R8, CINZENTO                            ; se for Cinzento, muda para vermelho.
 JZ por_semaforo_vermelho
 
 por_semaforo_cinzento:
@@ -472,16 +484,16 @@ PUSH R4
 
 MOV R1, BOTOES_PRESSAO
 MOV R3, AGULHAS
-MOV R4, 0H                          ; inicializar o contador a 0 
-MOVB R0, [R1]                       ; mover os valores dos botoes de pressao para R1
+MOV R4, 0H                                  ; inicializar o contador a 0 
+MOVB R0, [R1]                               ; mover os valores dos botoes de pressao para R1
 
 CMP R0, 0
-JZ fim_agulhas                      ; se for 0 entao nao ha valores para atribuir
+JZ fim_agulhas                              ; se for 0 entao nao ha valores para atribuir
 
 ler_botoes_pressao:
-BIT R0,0                            ; testar o bit 0, que corresponde a verificar se o botao foi carregado 
-JNZ mudar_agulha                    ; se o bit estiver a 1, o botao foi premido, portanto vamos mudar o estado
-CALL proximo_botao                  ; caso contrario passamos ao proximo botao 
+BIT R0,0                                    ; testar o bit 0, que corresponde a verificar se o botao foi carregado 
+JNZ mudar_agulha                            ; se o bit estiver a 1, o botao foi premido, portanto vamos mudar o estado
+CALL proximo_botao                          ; caso contrario passamos ao proximo botao 
 JMP ler_botoes_pressao
 
 mudar_agulha:
@@ -489,7 +501,7 @@ CALL ver_agulhas
 
 ver_estado_da_tabela:
 MOVB R8, [R5]
-CMP R8, DIREITA                     ; se estiver para a direita, muda para esquerda
+CMP R8, DIREITA                             ; se estiver para a direita, muda para esquerda
 JZ por_agulha_esquerda
 
 por_agulha_direita:
@@ -538,16 +550,16 @@ MOV R1, INFORMACAO_SENSORES
 MOV R2, LCD_SUPERIOR
 MOV R3, LCD_INFERIOR
 
-MOVB R5, [R1]               	; 1º byte (informacão sobre o comboio que passou)
-MOVB R6, [R1]               	; 2º byte (valor do sensor pelo qual passou)
+MOVB R5, [R1]                               ; 1º byte (informacão sobre o comboio que passou)
+MOVB R6, [R1]                               ; 2º byte (valor do sensor pelo qual passou)
 
-MOV R0, 30H                 	; somar 30H para transformar em codigo ASCII os numeros 0-9
+MOV R0, 30H                                 ; somar 30H para transformar em codigo ASCII os numeros 0-9
 ADD R6,R0
 
-BIT R5, 0                   	; nao contamos o bit a 1 que e a parte de tras da carruagem 
+BIT R5, 0                                   ; nao contamos o bit a 1 que e a parte de tras da carruagem 
 JNZ fim_sensores
 
-BIT R5, 1                   	; bit que diz qual o comboio 
+BIT R5, 1                                   ; bit que diz qual o comboio 
 JZ sensor_comboio_0
 
 
