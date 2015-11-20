@@ -5,18 +5,7 @@
 ;* Isabel Dias       84726    *;
 ;******************************;
 
-;************************************************************************************
-; Informacao do Codigo:
-;
-; Geralmente: 
-; R0: corresponde a o endereco de escrita (W) 
-; R1: 
-; R2:
-; R3:
-; R4: corresponde a um contador que conta um certo numero de accoes 
-; R5:
-; R6:
-; R7:
+:
 
 ;*************************************************************************************
 ; Constantes 
