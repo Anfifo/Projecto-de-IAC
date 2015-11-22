@@ -11,7 +11,7 @@
 ; Regras seguidas geralmente pelo codigo : 
 ; R0: (R) corresponde ao valor de um endereço de leitura
 ; R1: (R) corresponde a um endereço de leitura
-; R2: (R) corresponde a um endereço de leitura 
+; R2: (R) corresponde a um endereço de leitura ou (W) um endereço de escrita
 ; R3: (W) corresponde a um endereço de escrita 
 ; R4: Contador 
 ; R5: (R/W) endereço de uma tabela/words/strings
@@ -45,6 +45,10 @@ NUMERO_EVENTOS_SENSORES EQU 801CH           ; (R) le o numero de eventos lidos p
 INFORMACAO_SENSORES     EQU 801EH           ; (R) le a informacao dada pelo sensor, qual
 LCD_SUPERIOR  EQU 8000H                     ; (W) escreve informacao no LCD superior 
 LCD_INFERIOR  EQU 8002H                     ; (W) escrever informacao no LCD inferior
+
+COMBOIO_0 EQU 0H
+COMBOIO_1 EQU 10H
+SENTIDO_NEGATIVO_COMBOIO EQU 80H
 
 ESQUERDA EQU 1H                             ; Valor do estado da agulha quando esta em modo "esquerda"
 DIREITA  EQU 2H                             ; Valor do estado da agulha quando esta em modo "direita"
@@ -194,9 +198,9 @@ RET
 verificar_mudanca_sensores:                 ; iniciar a leitura dos sensores caso haja pelo menos 1 evento
 MOV R2, NUMERO_EVENTOS_SENSORES
 MOVB R8, [R2]
+
 CMP R8, 0H
 JZ fim_verificar_mudanca_sensores
-
 CALL sensores 
 
 fim_verificar_mudanca_sensores:
@@ -206,11 +210,11 @@ RET
 ;**************************************************************************************************************************************
 ; Rotina Auxiliar a Rotina de verificacao 
 ;**************************************************************************************************************************************
-; Rotina responsavel por mover para o Registo R8 e R9 os valores do endereco e o valor anterior da tabela respectiva depois de comparar
+; Processo responsavel por mover para o Registo R8 e R9 os valores do endereco e o valor anterior da tabela respectiva depois de comparar
 ;
 ; antes_de_comparar: 
 ; Argumentos: R4 (contador), R2 (endereco do valor atual ), R5 (com o endereco do valor anterior)
-; Retorna: R8 (com o valor [R2]) , R9 (com o valor [R5])
+; Retorna: R8 (R8 <- [R2]) , R9 (R9 <- [R5]), R4 (R4 <- R4+1)
 ;
 ;***************************************************************************************************************************************
 antes_de_comparar:
@@ -226,25 +230,23 @@ MOVB [R5], R8                               ; escreve na tabela o valor atual pa
 POP R5
 POP R4
 POP R2
-
 ADD R4,1H                                   ; aumenta o contador para aceder ao endereco abaixo na proxima comparacao
 RET
 
 ;****************************************************************************************************************************************
 ; Mover Comboios
 ;****************************************************************************************************************************************
-; Processo responsavel pelo movimento dos comboios consoante a barra de velocidades (slider/R3)
+; Processo responsavel pelo movimento dos comboios consoante a barra de velocidades (slider/R1)
 ;
 ; Arguemntos: Nenhum
 ; Retorna: Nada
 ;
-; R1: endereco de selecao de comboios usado para escolher o comboio e operacao executada (mudar sentido)
-; R2: endereco de operacao comboio usado para escrever a velocidade e sentido do comboio escolhido pela selecao (R1)
-; R3: endereco de barras de velocidades (sliders) de onde lemos qual o comboio (slider superior comboio azul/comboio 0) o sentido e velocidade
-; R4: registo com o valor da barra de velocidades
-; R5: mascara usada para filtrar bits desnecessarios antes de decidir o sentido do comboio
-; R6: registo com o valor de barra de velocidades para se usar no calculo do comboio 1 sem alterar o comboio 0
-; R7: mascara usada para filtrar bits desncessarios apos calculado o valor que vamos atribuir ao comboio
+; R1:  endereco de barras de velocidades (sliders) de onde lemos qual o comboio (slider superior comboio azul/comboio 0) o sentido e velocidade 
+; R2:  selecao de comboios usado para escolher o comboio e operacao executada (mudar sentido)
+; R3:  endereco de operacao comboio usado para escrever a velocidade e sentido do comboio escolhido pela selecao (R1)
+; R8:  mascara usada para filtrar bits desnecessarios antes de decidir o sentido do comboio
+; R9:  registo com o valor de barra de velocidades para se usar no calculo do comboio 1 sem alterar o comboio 0
+; R10: mascara usada para filtrar bits desncessarios apos calculado o valor que vamos atribuir ao comboio
 ;*****************************************************************************************************************************************
 
 mover_comboios:
@@ -254,56 +256,78 @@ PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
+PUSH R6
+PUSH R7
+PUSH R8
+PUSH R9
+PUSH R10
 
-MOV R1,SELECAO_COMBOIO
-MOV R2,OPERACAO_COMBOIO
-MOV R3,BARRAS_VELOCIDADE
-MOVB R4,[R3]
-MOV R5, MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR
-MOV R7, MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
+MOV R1,  BARRAS_VELOCIDADE
+MOV R2,  SELECAO_COMBOIO
+MOV R3,  OPERACAO_COMBOIO
+MOV R8,  MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR
+MOV R9,  MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
+MOV R10, SENTIDO_NEGATIVO_COMBOIO
+MOVB R7,[R1]
 
+comboio_0:
+MOV R0, COMBOIO_0 ;comboio 0
+CALL calcula_e_escreve_valor_comboio
 
+comboio_1:
+MOV R0, COMBOIO_1 ;comboio 1
+SHR R7,4                                    ; shift para a direita para usarmos apenas os bits de maior peso do comboio 1 
+CALL calcula_e_escreve_valor_comboio
 
-ler_velocidade_e_direcao_comboio1:
-MOV R6,R4                                   ; copiar o valor para nao o alterarmos e podermos usar o R4 para calcular a velocidade do comboio 0
-SHR R6,4                                    ; shift para a direita para usarmos apenas os bits de maior peso do comboio 0 
-AND R6, R5                                  ; filtrar com a mascara apenas os bits necessarios
-BIT R6, 3                                   ; ler o bit 3 para ver a sua direcao
-JZ ler_velocidade_e_direcao_comboio0        ; se o bit for 0, saltamos para o proximo comboio para nao por o seu sentido negativo
-
-por_sentido_negativo_do_comboio1:
-MOV R0, 80H                     
-ADD R6, R0                                  ; poe o sentido negativo
-
-ler_velocidade_e_direcao_comboio0:
-AND R4, R5
-BIT R4, 3                                   ; ler o bit 3 para ver a direcao dele
-JZ escreve_comboio0                         ; se o bit for zero saltamos para nao por o seu sentido negativo
-
-por_sentido_negativo_do_comboio0:
-MOV R0, 80H                 
-ADD R4, R0                                  ; poe o bit a 1 para mudar o sentido
-
-
-escreve_comboio0: 
-AND R6,R7                                   ; limpar os bits nao necessarios
-MOV R0,0H                                   ; selecao do comboio 0
-MOVB [R1],R0                                ; escolher o comboio e operacao de mudar sentido
-MOVB [R2],R6                                ; escrever a mudanca de sentido e velocidade
-
-escreve_comboios1:
-AND R4,R7                                   ; limpeza dos bits nao necessarios
-MOV R0,10H                                  ; selecao do comboio 1
-MOVB [R1],R0                                ; escolher o comboio e a operacao de mudar sentido
-MOVB [R2],R4                                ; escrever a mudanca de sentido e velocidade
 
 fim_mover_comboio:
+POP R10
+POP R9
+POP R8
+POP R7
+POP R6
 POP R5
 POP R4
 POP R3
 POP R2
 POP R1
 POP R0
+RET
+;******************************************************************************************************************************
+; Rotina Auxiliar a mover comboios
+;******************************************************************************************************************************
+; Processo responsavel por colocar o valor dos sliders (r7) nos respectivos comboios.
+;
+; Argumentos: R7 (valor do sentido e velocidade do comboio), R0 (valor respectivo ao numero do comboio)
+; Retorna: nada
+;
+;******************************************************************************************************************************
+
+calcula_e_escreve_valor_comboio:
+PUSH R0
+PUSH R1
+PUSH R7
+PUSH R8
+PUSH R10
+
+AND R7, R8
+BIT R7, 3                                  ; ler o bit 3 para ver a direcao dele
+JZ escreve_comboio                         ; se o bit for zero saltamos para nao por o seu sentido negativo
+
+por_sentido_negativo_do_comboio:                 
+ADD R7, R10 
+
+escreve_comboio: 
+AND R7,R9                                   ; limpar os bits nao necessarios
+MOVB [R2],R0                                ; escolher o comboio e operacao de mudar sentido
+MOVB [R3],R7                                ; escrever a mudanca de sentido e velocidade
+
+POP R10
+POP R8
+POP R7
+POP R1
+POP R0
+
 RET
 
 ;**********************************************************************************************************************
@@ -335,6 +359,11 @@ PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
+PUSH R6
+PUSH R7
+PUSH R8
+PUSH R9
+PUSH R10
 
 MOV R1, TECLADO07
 MOV R3, SEMAFOROS
@@ -345,6 +374,7 @@ MOV R10, VERMELHO
 
 MOVB R0, [R1]                               ; mover os valores do teclado para R1
 
+verificar_de_existe_sinal_ligado:
 CMP R0, 0
 JZ fim_semaforos07
 
@@ -358,6 +388,11 @@ mudar_semaforo07:
 CALL escrever_valor
 
 fim_semaforos07:
+POP R10
+POP R9
+POP R8
+POP R7
+POP R6
 POP R5
 POP R4
 POP R3
@@ -455,6 +490,11 @@ PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
+PUSH R6
+PUSH R7
+PUSH R8
+PUSH R9
+PUSH R10
 
 MOV R2, TECLADO8F
 MOV R3, SEMAFOROS
@@ -477,6 +517,11 @@ muda_semaforo8F:
 CALL escrever_valor
 
 fim_semaforos8F:
+POP R10
+POP R9
+POP R8
+POP R7
+POP R6
 POP R5
 POP R4
 POP R3
@@ -518,6 +563,11 @@ PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
+PUSH R6
+PUSH R7
+PUSH R8
+PUSH R9
+PUSH R10
 
 MOV R1, BOTOES_PRESSAO
 MOV R3, AGULHAS
@@ -541,6 +591,11 @@ mudar_agulha:
 CALL escrever_valor
 
 fim_agulhas:
+POP R10
+POP R9
+POP R8
+POP R7
+POP R6
 POP R5
 POP R4
 POP R3
@@ -572,6 +627,11 @@ PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
+PUSH R6
+PUSH R7
+PUSH R8
+PUSH R9
+PUSH R10
 
 MOV R1, INFORMACAO_SENSORES
 MOV R2, LCD_SUPERIOR
@@ -598,6 +658,11 @@ sensor_comboio_0:
 MOVB [R2], R6
 
 fim_sensores:
+POP R10
+POP R9
+POP R8
+POP R7
+POP R6
 POP R5
 POP R4
 POP R3
