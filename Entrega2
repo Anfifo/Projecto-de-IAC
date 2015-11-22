@@ -9,9 +9,9 @@
 ; Informacao do Codigo:
 ;
 ; Regras seguidas geralmente pelo codigo : 
-; R0: (R) corresponde ao valor de um endereço de leitura
+; R0:  -
 ; R1: (R) corresponde a um endereço de leitura
-; R2: (R) corresponde a um endereço de leitura ou (W) um endereço de escrita
+; R2: (R)/(W) corresponde a um endereço de leitura ou um endereço de escrita
 ; R3: (W) corresponde a um endereço de escrita 
 ; R4: Contador 
 ; R5: (R/W) endereço de uma tabela/words/strings
@@ -46,20 +46,23 @@ INFORMACAO_SENSORES     EQU 801EH           ; (R) le a informacao dada pelo sens
 LCD_SUPERIOR  EQU 8000H                     ; (W) escreve informacao no LCD superior 
 LCD_INFERIOR  EQU 8002H                     ; (W) escrever informacao no LCD inferior
 
-COMBOIO_0 EQU 0H
-COMBOIO_1 EQU 10H
-SENTIDO_NEGATIVO_COMBOIO EQU 80H
+COMBOIO_0 EQU 0H                            ; Valor que corresponde ao comboio numero 0 (azul)
+COMBOIO_1 EQU 10H                           ; Valor que corresponde ao comboio numero 1 (verde)
+SENTIDO_NEGATIVO_COMBOIO EQU 80H            ; Valor que corresponde ao sentido negativo de um comboio
 
 ESQUERDA EQU 1H                             ; Valor do estado da agulha quando esta em modo "esquerda"
 DIREITA  EQU 2H                             ; Valor do estado da agulha quando esta em modo "direita"
 
 CINZENTO EQU 0H                             ; Valor da cor Cinzenta no semaforo
 VERMELHO EQU 1H                             ; Valor da cor Vermelha no semaforo
-VERDE    EQU 2H                             ; Valor da cor Verde no semaforo
+VERDE    EQU 2H                             ; Valor da cor Verde no semaforo30H                 
+
+TRANSFORMADOR_ASCII EQU 30H                 ; Valor necessario para no sensor transformar a informacao correcta ascii dos numeros
 
 
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H
+MASCARA_BOTOES_AGULHAS EQU 0FH              ; filtrar os bits que nao sejam os primeiros 4 das agulhas, pois so temos 4 agulhas para mudar 
 
 VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H        ; (R/W) valores atribuidos anteriormente (iniciados a 0)
 VALOR_ANTERIOR_SEMAFOROS07    EQU 0H
@@ -126,8 +129,8 @@ MOV SP, SP_inicial
 
 start:
 
-MOV R4,0H                                   ; contador para aceder a tabela 
-MOV R5,valores_anteriores                   ; endereco com a tabela dos valores anteriores
+MOV R4, 0H                                   ; contador para aceder a tabela 
+MOV R5, valores_anteriores                   ; endereco com a tabela dos valores anteriores
 
 ciclo:
 CALL verificar_mudanca_mover_comboios
@@ -267,16 +270,16 @@ MOV R2,  SELECAO_COMBOIO
 MOV R3,  OPERACAO_COMBOIO
 MOV R8,  MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR
 MOV R9,  MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
-MOV R10, SENTIDO_NEGATIVO_COMBOIO
+MOV R10, SENTIDO_NEGATIVO_COMBOIO                   ; corresponde ao valor 80H
 MOVB R7,[R1]
 
 comboio_0:
-MOV R0, COMBOIO_0 ;comboio 0
+MOV R0, COMBOIO_0                                   ;comboio 0
 CALL calcula_e_escreve_valor_comboio
 
 comboio_1:
-MOV R0, COMBOIO_1 ;comboio 1
-SHR R7,4                                    ; shift para a direita para usarmos apenas os bits de maior peso do comboio 1 
+MOV R0, COMBOIO_1                                   ;comboio 1
+SHR R7,4                                            ; shift para a direita para usarmos apenas os bits de maior peso do comboio 1 
 CALL calcula_e_escreve_valor_comboio
 
 
@@ -296,7 +299,7 @@ RET
 ;******************************************************************************************************************************
 ; Rotina Auxiliar a mover comboios
 ;******************************************************************************************************************************
-; Processo responsavel por colocar o valor dos sliders (r7) nos respectivos comboios.
+; Processo responsavel por colocar o valor dos sliders (R7) nos respectivos comboios.
 ;
 ; Argumentos: R7 (valor do sentido e velocidade do comboio), R0 (valor respectivo ao numero do comboio)
 ; Retorna: nada
@@ -310,7 +313,7 @@ PUSH R7
 PUSH R8
 PUSH R10
 
-AND R7, R8
+AND R7, R8                                 ; aplicar a mascara para filtrar os bits desncessarios 
 BIT R7, 3                                  ; ler o bit 3 para ver a direcao dele
 JZ escreve_comboio                         ; se o bit for zero saltamos para nao por o seu sentido negativo
 
@@ -371,21 +374,14 @@ MOV R4, 0H                                  ; inicializar o contador a 0
 MOV R5, cores_semaforos                     ; colocar no argumento R5 da funcao o endereço da tabela 
 MOV R9, VERDE
 MOV R10, VERMELHO
-
 MOVB R0, [R1]                               ; mover os valores do teclado para R1
 
 verificar_de_existe_sinal_ligado:
 CMP R0, 0
 JZ fim_semaforos07
 
-ler_botoes07:
-BIT R0,0                                    ; testar o bit 0 que corresponde a verificar se o botao foi carregado 
-JNZ mudar_semaforo07                        ; se o bit estiver a 1 o botao foi premido portanto vamos mudar a cor
-CALL proximo_botao                          ; caso contrario passamos ao proximo botao 
-JMP ler_botoes07
-
-mudar_semaforo07:
-CALL escrever_valor
+ler_botoes_e_escrever_botoes07:
+CALL le_botoes
 
 fim_semaforos07:
 POP R10
@@ -404,19 +400,44 @@ RET
 ;***************************************************************************************************************************
 ; Rotinas auxiliares aos Semaforos e Agulhas
 ;***************************************************************************************************************************
+; 
+; le_botoes:
+;      Argumentos: R0 (valor do botoes)
+;      Retorna: nada 
+;
+;
+;--------------------------------------------------------------------------------------------------------------------------
 ; escrever_valor:
-;     Argumentos: R4 (contador) R 5(endereço) R9 (estado 1) R10 (estado 2)
-;     Retorna: Nada
+;      Argumentos: R4 (contador) R 5(endereço) R9 (estado 1) R10 (estado 2)
+;      Retorna: Nada
 ;
 ; Semaforo 0-7: R9 Verde                             ! R10: Vermelho
 ; Semaforo 8-9: R9 Cinza                             | R10: Vermelho
 ; Agulhas:      R9 Direita                           | R10: Esquerda
 ;
 ; -------------------------------------------------------------------------------------------------------------------------
+; 
 ; proximo_botao:
-;     Argumentos: R4(contador), R0(valor)     | Retorna: R4+1(incrementa o contador),  R0->1 (faz um shift right)
+;      Argumentos: R4(contador), R0(valor)   
+;      Retorna: R4+1(incrementa o contador),  R0->1 (faz um shift right)
 ;
 ;***************************************************************************************************************************
+
+le_botoes:
+PUSH R0
+
+BIT R0,0                                    ; testar o bit 0 que corresponde a verificar se o botao foi carregado 
+JNZ muda_valor                              ; se o bit estiver a 1, o botao foi premido por isso mudamos o valor 
+CALL proximo_botao                          ; caso contrario passamos ao proximo botao 
+JMP le_botoes
+
+muda_valor:
+CALL escrever_valor
+
+POP R0 
+RET 
+
+;------------------------------------------------------------------------------------------------------------------------
 
 escrever_valor:
 PUSH R5
@@ -505,16 +526,11 @@ MOV R10, VERMELHO
 MOVB R0, [R2]                               ; mover os valores do teclado para R1
 
 CMP R0, 0
-JZ fim_semaforos07
+JZ fim_semaforos8F
 
-le_botoes8F:
-BIT R0,0                                    ; testar o bit 0 que corresponde a verificar se o botao foi carregado 
-JNZ muda_semaforo8F                         ; se o bit estiver a 1, o botao foi premido portanto vamos mudar a cor
-CALL proximo_botao                          ; caso contrario passamos ao proximo botao 
-JMP le_botoes8F
 
-muda_semaforo8F:
-CALL escrever_valor
+le_botoes_e_muda_semaforo8F:
+CALL le_botoes
 
 fim_semaforos8F:
 POP R10
@@ -573,22 +589,17 @@ MOV R1, BOTOES_PRESSAO
 MOV R3, AGULHAS
 MOV R4, 0H                                  ; inicializar o contador a 0 
 MOV R5, estados_agulhas                     ; movemos o endereco dos estados_agulhas (tabela) para o R5
-
-MOVB R0, [R1]                               ; mover os valores dos botoes de pressao para R1
+MOV R6, MASCARA_BOTOES_AGULHAS              ; filtrar os bits maiores que 4 pois apenas temos 4 agulhas
 MOV R9, DIREITA
 MOV R10, ESQUERDA
 
+MOVB R0, [R1]
+AND R0, R6
 CMP R0, 0
 JZ fim_agulhas                              ; se for 0 entao nao ha valores para atribuir
 
 ler_botoes_pressao:
-BIT R0,0                                    ; testar o bit 0, que corresponde a verificar se o botao foi carregado 
-JNZ mudar_agulha                            ; se o bit estiver a 1, o botao foi premido, portanto vamos mudar o estado
-CALL proximo_botao                          ; caso contrario passamos ao proximo botao 
-JMP ler_botoes_pressao
-
-mudar_agulha:
-CALL escrever_valor
+CALL le_botoes
 
 fim_agulhas:
 POP R10
@@ -612,12 +623,12 @@ RET
 ; Argumentos: Nenhum
 ; Return: Nada
 ; 
-; R0: temporario que recebe o valor 30H que transforma o valor de R6 em codigo ASCII que possa ser lido pelos LCDs como numeros
+; R0: temporario que recebe o valor 30H que transforma o valor de R9 em codigo ASCII que possa ser lido pelos LCDs como numeros
 ; R1: Endereco com a informacao dos Sensores
 ; R2: Endereco do LCD superior (comboio 0)
 ; R3: Endereco do LCD inferior (comboio 1)
-; R5: fica com o primeiro byte das informacoes dos sensores, informacao sobre qual dos comboios passou
-; R6: fica com o segundo byte das informacoes dos sensores, o sensor pelo qual o comboio passou
+; R8: fica com o primeiro byte das informacoes dos sensores, informacao sobre qual dos comboios passou
+; R9: fica com o segundo byte das informacoes dos sensores, o sensor pelo qual o comboio passou
 ;***********************************************************************************************************************************
 
 sensores:
@@ -633,29 +644,30 @@ PUSH R8
 PUSH R9
 PUSH R10
 
+MOV R0, TRANSFORMADOR_ASCII
 MOV R1, INFORMACAO_SENSORES
 MOV R2, LCD_SUPERIOR
 MOV R3, LCD_INFERIOR
 
-MOVB R5, [R1]                               ; 1º byte (informacão sobre o comboio que passou)
-MOVB R6, [R1]                               ; 2º byte (valor do sensor pelo qual passou)
+MOVB R8, [R1]                               ; 1º byte (informacão sobre o comboio que passou)
+MOVB R9, [R1]                               ; 2º byte (valor do sensor pelo qual passou)
 
-MOV R0, 30H                                 ; somar 30H para transformar em codigo ASCII os numeros 0-9
-ADD R6,R0
+MOV R0, TRANSFORMADOR_ASCII                 ; somar 30H para transformar em codigo ASCII os numeros 0-9
+ADD R9,R0
 
-BIT R5, 0                                   ; nao contamos o bit a 1 que e a parte de tras da carruagem 
+BIT R8, 0                                   ; nao contamos o bit a 1 que e a parte de tras da carruagem 
 JNZ fim_sensores
 
-BIT R5, 1                                   ; bit que diz qual o comboio 
+BIT R8, 1                                   ; bit que diz qual o comboio 
 JZ sensor_comboio_0
 
 
 sensor_comboio_1:
-MOVB [R3], R6
+MOVB [R3], R9
 JMP fim_sensores
 
 sensor_comboio_0:
-MOVB [R2], R6
+MOVB [R2], R9
 
 fim_sensores:
 POP R10
