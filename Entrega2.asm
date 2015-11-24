@@ -58,8 +58,8 @@ VERMELHO EQU 1H                             ; Valor da cor Vermelha no semaforo
 VERDE    EQU 2H                             ; Valor da cor Verde no semaforo30H                 
 
 TRANSFORMADOR_ASCII EQU 30H                 ; Valor necessario para no sensor transformar a informacao correcta ascii dos numeros
-DESOCUPADO EQU 0
-OCUPADO EQU 1
+DESOCUPADO EQU 0							; quando o troco se encontra desocupado
+OCUPADO EQU 1								; quando o troco se encontra ocupado
 
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H
@@ -662,4 +662,10 @@ RET
 ;********************************************************************************************************************************
 
 interrupcao0:
+RFE
 
+interrupcao1:
+RFE
+
+interrupcao2:
+RFE
