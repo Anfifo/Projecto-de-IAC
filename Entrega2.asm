@@ -58,7 +58,7 @@ VERMELHO EQU 1H                             ; Valor da cor Vermelha no semaforo
 VERDE    EQU 2H                             ; Valor da cor Verde no semaforo30H                 
 
 TRANSFORMADOR_ASCII EQU 30H                 ; Valor necessario para no sensor transformar a informacao correcta ascii dos numeros
-
+DESOCUPADO EQU 0
 
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H
@@ -117,8 +117,17 @@ valores_anteriores:                         ; tabela com os valores anteriores p
     STRING      VALOR_ANTERIOR_SEMAFOROS89
     STRING      VALOR_ANTERIOR_AGULHAS
 
-
-
+troco:
+  STRING    DESOCUPADO
+  STRING    DESOCUPADO
+  STRING    DESOCUPADO
+  STRING    DESOCUPADO
+  STRING    DESOCUPADO
+  STRING    DESOCUPADO
+  STRING    DESOCUPADO
+  STRING    DESOCUPADO
+  
+  
 ;*******************************************************************************************************
 ; Programa Principal
 ;*******************************************************************************************************
