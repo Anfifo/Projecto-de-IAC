@@ -504,14 +504,10 @@ RET
 ;****************************************************************************************************************************
 semaforos8F:
 PUSH R0
-PUSH R1
 PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
-PUSH R6
-PUSH R7
-PUSH R8
 PUSH R9
 PUSH R10
 
@@ -533,14 +529,10 @@ CALL le_botoes
 fim_semaforos8F:
 POP R10
 POP R9
-POP R8
-POP R7
-POP R6
 POP R5
 POP R4
 POP R3
 POP R2
-POP R1
 POP R0
 RET
 
@@ -573,13 +565,10 @@ agulhas:
 
 PUSH R0
 PUSH R1
-PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
 PUSH R6
-PUSH R7
-PUSH R8
 PUSH R9
 PUSH R10
 
@@ -602,13 +591,10 @@ CALL le_botoes
 fim_agulhas:
 POP R10
 POP R9
-POP R8
-POP R7
 POP R6
 POP R5
 POP R4
 POP R3
-POP R2
 POP R1
 POP R0
 RET
@@ -634,13 +620,8 @@ PUSH R0
 PUSH R1
 PUSH R2
 PUSH R3
-PUSH R4
-PUSH R5
-PUSH R6
-PUSH R7
 PUSH R8
 PUSH R9
-PUSH R10
 
 MOV R0, TRANSFORMADOR_ASCII
 MOV R1, INFORMACAO_SENSORES
@@ -668,13 +649,8 @@ sensor_comboio_0:
 MOVB [R2], R9
 
 fim_sensores:
-POP R10
 POP R9
 POP R8
-POP R7
-POP R6
-POP R5
-POP R4
 POP R3
 POP R2
 POP R1
