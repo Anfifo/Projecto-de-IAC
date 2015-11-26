@@ -57,9 +57,9 @@ CINZENTO EQU 0H                             ; Valor da cor Cinzenta no semaforo
 VERMELHO EQU 1H                             ; Valor da cor Vermelha no semaforo
 VERDE    EQU 2H                             ; Valor da cor Verde no semaforo30H                 
 
-TRANSFORMADOR_ASCII EQU 30H                 ; Valor necessario para no sensor transformar a informacao correcta ascii dos numeros
-DESOCUPADO EQU 0							; quando o troco se encontra desocupado
-OCUPADO EQU 1								; quando o troco se encontra ocupado
+TRANSFORMADOR_ASCII EQU 30H                 ; Valor necessario para no sensor transformar a informacao correcta ASCII dos numeros
+DESOCUPADO EQU 0							              ; quando o troco se encontra desocupado
+OCUPADO EQU 1								                ; quando o troco se encontra ocupado
 
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H                                                                        ;...........;    
@@ -80,7 +80,7 @@ VALOR_ANTERIOR_SENSOR         EQU 0H
 ;
 ; estados das agulhas: usada para saber a que estado estao as agulhas no momento presente (apos movimento)
 ;
-; cores semaforos: usada para saber a que estado/cor estao os semaforos no momento presente(apos mudanCa de cor)
+; cores semaforos: usada para saber a que estado/cor estao os semaforos no momento presente(apos mudanca de cor)
 ;
 ; valores anteriores: usada para saber qual o valor anteriormente lido para apenas aplicar mudanca se for diferente
 ;******************************************************************************************************************
