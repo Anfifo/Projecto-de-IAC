@@ -62,9 +62,9 @@ DESOCUPADO EQU 0							; quando o troco se encontra desocupado
 OCUPADO EQU 1								; quando o troco se encontra ocupado
 
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
-MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H
-MASCARA_BOTOES_AGULHAS EQU 0FH              ; filtrar os bits que nao sejam os primeiros 4 das agulhas, pois so temos 4 agulhas para mudar 
-
+MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H                                                                        ;...........;    
+MASCARA_BOTOES_AGULHAS EQU 0FH              ; filtrar os bits que nao sejam os primeiros 4 das agulhas, pois so temos ;.4 agulhas.; para mudar 
+                                                                                                                      ;...........;
 VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H        ; (R/W) valores atribuidos anteriormente (iniciados a 0)
 VALOR_ANTERIOR_SEMAFOROS07    EQU 0H
 VALOR_ANTERIOR_SEMAFOROS89    EQU 0H
