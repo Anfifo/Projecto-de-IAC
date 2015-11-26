@@ -62,15 +62,21 @@ DESOCUPADO EQU 0							              ; quando o troco se encontra desocupado
 OCUPADO EQU 1								                ; quando o troco se encontra ocupado
 
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
-MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H                                                                        ;...........;    
-MASCARA_BOTOES_AGULHAS EQU 0FH              ; filtrar os bits que nao sejam os primeiros 4 das agulhas, pois so temos ;.4 agulhas.; para mudar 
-                                                                                                                      ;...........;
+MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H                                                                        
+MASCARA_BOTOES_AGULHAS EQU 0FH              ; filtrar os bits que nao sejam os primeiros 4 das agulhas, pois so temos 4 agulhas para mudar 
 VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H        ; (R/W) valores atribuidos anteriormente (iniciados a 0)
 VALOR_ANTERIOR_SEMAFOROS07    EQU 0H
 VALOR_ANTERIOR_SEMAFOROS89    EQU 0H
 VALOR_ANTERIOR_AGULHAS        EQU 0H
 VALOR_ANTERIOR_SENSOR         EQU 0H
 
+VALOR_COMBOIOS_FRENTE         EQU 33H       ; corresponde a 00110011b
+VALOR_COMBOIO_0_PARADO        EQU 03H       ; corresponde a 00000011b
+VALOR_COMBOIO_1_PARADO        EQU 30H       ; corresponde a 00110000b
+VALOR_COMBOIOS_PARADOS        EQU 0H
+
+VALOR_ALTERAR_SEMAFORO_8      EQU 1H
+VALOR_ALTERAR_SEMAFORO_9      EQU 2H
 
 
 ;*****************************************************************************************************************
@@ -93,30 +99,30 @@ SP_inicial:                                 ; este e o endereco (1200H) com que 
 
 estados_agulhas:                            ; tabela para os estados das agulhas (DIREITA e ESQUERDA).
                                             ; 01 ESQUERDA, 10 DIREITA
-    STRING    DIREITA                       ; agulha 0
-    STRING    DIREITA                       ; agulha 1
-    STRING    DIREITA                       ; agulha 2
-    STRING    DIREITA                       ; agulha 3
+  STRING    DIREITA                       ; agulha 0
+  STRING    DIREITA                       ; agulha 1
+  STRING    DIREITA                       ; agulha 2
+  STRING    DIREITA                       ; agulha 3
 
 cores_semaforos:                            ; tabela para as cores dos semáforos (VERDE, CINZENTO ou VERMELHO).
                                             ; 00 cinzento, 01 vermelho, 10 verde, 11 amarelo.
-    STRING    VERDE                         ; cor do semáforo 0
-    STRING    VERDE                         ; cor do semáforo 1
-    STRING    VERDE                         ; cor do semáforo 2
-    STRING    VERDE                         ; cor do semáforo 3
-    STRING    VERDE                         ; cor do semáforo 4
-    STRING    VERDE                         ; cor do semáforo 5
-    STRING    VERDE                         ; cor do semáforo 6
-    STRING    VERDE                         ; cor do semáforo 7
-    STRING    VERDE                         ; cor do semáforo 8
-    STRING    VERDE                         ; cor do semáforo 9
+  STRING    VERDE                         ; cor do semáforo 0
+  STRING    VERDE                         ; cor do semáforo 1
+  STRING    VERDE                         ; cor do semáforo 2
+  STRING    VERDE                         ; cor do semáforo 3
+  STRING    VERDE                         ; cor do semáforo 4
+  STRING    VERDE                         ; cor do semáforo 5
+  STRING    VERDE                         ; cor do semáforo 6
+  STRING    VERDE                         ; cor do semáforo 7
+  STRING    VERDE                         ; cor do semáforo 8
+  STRING    VERDE                         ; cor do semáforo 9
 
 valores_anteriores:                         ; tabela com os valores anteriores para comparacao
     
-    STRING      VALOR_ANTERIOR_MOVER_COMBOIOS
-    STRING      VALOR_ANTERIOR_SEMAFOROS07
-    STRING      VALOR_ANTERIOR_SEMAFOROS89
-    STRING      VALOR_ANTERIOR_AGULHAS
+  STRING      VALOR_ANTERIOR_MOVER_COMBOIOS
+  STRING      VALOR_ANTERIOR_SEMAFOROS07
+  STRING      VALOR_ANTERIOR_SEMAFOROS89
+  STRING      VALOR_ANTERIOR_AGULHAS
 
 troco:
   STRING    DESOCUPADO
@@ -129,6 +135,7 @@ troco:
   STRING    DESOCUPADO
   
   
+
 ;*******************************************************************************************************
 ; Programa Principal
 ;*******************************************************************************************************
@@ -136,6 +143,9 @@ troco:
 ;*******************************************************************************************************
 PLACE 0000H
 MOV SP, SP_inicial
+
+pre_start:
+CALL inicializar_comboios
 
 start:
 
@@ -151,6 +161,27 @@ CALL verificar_mudanca_sensores
 
 JMP start
 
+;******************************************************************************************************
+; Rotinas de inicialização
+;******************************************************************************************************
+; Processo pelo qual inicializamos os comboios a andar a velocidade 3 para a frente e os semaforos
+; da passagem de nivel a cinzento
+;
+;
+;******************************************************************************************************
+
+inicializar_comboios:
+PUSH R3
+PUSH R7
+
+MOV R3, BARRAS_VELOCIDADE
+MOV R7, VALOR_COMBOIOS_FRENTE
+MOVB [R3], R7 
+CALL mover_comboios
+
+POP R7
+POP R3
+RET
 
 ;******************************************************************************************************
 ; Rotinas de verificacao 
@@ -670,7 +701,4 @@ interrupcao0:
 RFE
 
 interrupcao1:
-RFE
-
-interrupcao2:
 RFE
