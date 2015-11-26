@@ -280,12 +280,12 @@ MOV R9,  MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
 MOV R10, SENTIDO_NEGATIVO_COMBOIO                   ; corresponde ao valor 80H
 MOVB R7,[R1]
 
-comboio_0:
-MOV R0, COMBOIO_0                                   ;comboio 0
+comboio_1:
+MOV R0, COMBOIO_1                                  ;comboio 1
 CALL calcula_e_escreve_valor_comboio
 
-comboio_1:
-MOV R0, COMBOIO_1                                   ;comboio 1
+comboio_0:
+MOV R0, COMBOIO_0                                   ;comboio 0
 SHR R7,4                                            ; shift para a direita para usarmos apenas os bits de maior peso do comboio 1 
 CALL calcula_e_escreve_valor_comboio
 
@@ -660,9 +660,6 @@ RET
 ;********************************************************************************************************************************
 ; Rotinas                                                                                                                       ;
 ;********************************************************************************************************************************
-CALL alterar_os_semaforos_8_e_9
-RET
-
 
 
 ;********************************************************************************************************************************
