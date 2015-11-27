@@ -139,8 +139,7 @@ troco:
   STRING    DESOCUPADO
   
 valores_semaforos:                      ; tabela usada para atribuir os valores aos semaforos
-  STRING NENHUM 
-  STRING NENHUM
+  WORD  NENHUM 
 
 ;*******************************************************************************************************
 ; Programa Principal
@@ -196,7 +195,7 @@ PUSH R3
 PUSH R7
 MOV R3, valores_semaforos
 MOV R7, VALOR_ALTERAR_SEMAFORO_8
-MOVB [R3], R7 
+MOV [R3], R7 
 CALL semaforos8F
 POP R7
 POP R3
@@ -208,7 +207,7 @@ PUSH R7
 
 MOV R3, valores_semaforos
 MOV R7, VALOR_ALTERAR_SEMAFORO_9
-MOVB [R3], R7
+MOV [R3], R7
 CALL semaforos8F
 
 POP R7
@@ -628,7 +627,7 @@ MOV R5, cores_semaforos                     ; colocar no argumento R5 da funcao 
 MOV R6, MASCARA_SEMAFORO_8_9
 MOV R10, CINZENTO
 MOV R9, VERMELHO
-MOVB R0, [R2]                               ; mover os valores do teclado para R1
+MOV R0, [R2]                               ; mover os valores do teclado para R1
 AND R0, R6
 
 CMP R0, 0
