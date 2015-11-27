@@ -1,4 +1,4 @@
-;******************************;
+***************;
 ;*        Grupo 33:           *;
 ;* Andre Fonseca     84698    *;
 ;* Catarina Custodio 84705    *;
@@ -138,9 +138,9 @@ troco:
   STRING    DESOCUPADO
   STRING    DESOCUPADO
   
-;valores_semaforos: ; tabela usada para atribuir os valores aos semaforos
- ; STRING NENHUM 
-  ;STRING NENHUM
+valores_semaforos: ; tabela usada para atribuir os valores aos semaforos
+  STRING NENHUM 
+  STRING NENHUM
 
 ;*******************************************************************************************************
 ; Programa Principal
@@ -152,7 +152,9 @@ MOV SP, SP_inicial
 
 pre_start:
 CALL inicializar_comboios
-;CALL alterar_os_semaforos_8_e_9
+CALL alterar_o_semaforo_8
+CALL alterar_o_semaforo_9
+
 start:
 
 MOV R4, 0H                                   ; contador para aceder a tabela 
@@ -188,23 +190,30 @@ POP R3
 RET
 
 ;------------------------------------------------------------------------------------------------------
-;alterar_os_semaforos_8_e_9:
+alterar_o_semaforo_8:
 
-;PUSH R3
-;PUSH R7
-;MOV R3, valores_semaforos
-;MOV R7, VALOR_ALTERAR_SEMAFORO_8
-;MOVB [R3], R7 
-;CALL semaforos8F
+PUSH R3
+PUSH R7
+MOV R3, valores_semaforos
+MOV R7, VALOR_ALTERAR_SEMAFORO_8
+MOVB [R3], R7 
+CALL semaforos8F
+POP R7
+POP R3
+RET
 
-;MOV R3, valores_semaforos
-;MOV R7, VALOR_ALTERAR_SEMAFORO_9
-;MOVB [R3], R7
-;CALL semaforos8F
+alterar_o_semaforo_9:
+PUSH R3
+PUSH R7
 
-;POP R7
-;POP R3
-;RET
+MOV R3, valores_semaforos
+MOV R7, VALOR_ALTERAR_SEMAFORO_9
+MOVB [R3], R7
+CALL semaforos8F
+
+POP R7
+POP R3
+RET
 
 
 ;******************************************************************************************************
@@ -255,7 +264,7 @@ verificar_mudanca_semaforos8F:              ; verificar se houve mudanca dos val
 PUSH R8
 PUSH R9
 
-MOV R2, TECLADO8F
+MOV R2, valores_semaforos
 CALL antes_de_comparar
 
 CMP R8,R9
@@ -520,10 +529,11 @@ RET
 le_botoes:
 PUSH R0
 
+leitura:
 BIT R0,0                                    ; testar o bit 0 que corresponde a verificar se o botao foi carregado 
 JNZ muda_valor                              ; se o bit estiver a 1, o botao foi premido por isso mudamos o valor 
 CALL proximo_botao                          ; caso contrario passamos ao proximo botao 
-JMP le_botoes
+JMP leitura
 
 muda_valor:
 CALL escrever_valor
@@ -611,7 +621,7 @@ PUSH R8
 PUSH R9
 PUSH R10
 
-MOV R2, TECLADO8F
+MOV R2, valores_semaforos
 MOV R3, SEMAFOROS
 MOV R4, 8H                                  ; inicializar o contador a 8
 MOV R5, cores_semaforos                     ; colocar no argumento R5 da funcao o endereço da tabela 
