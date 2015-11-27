@@ -64,6 +64,8 @@ OCUPADO EQU 1								                ; quando o troco se encontra ocupado
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H                                                                        
 MASCARA_BOTOES_AGULHAS EQU 0FH              ; filtrar os bits que nao sejam os primeiros 4 das agulhas, pois so temos 4 agulhas para mudar 
+MASCARA_SEMAFORO_8_9 EQU 3H                 ; filtrar os bits que nao sejam os primeiros 2 pois so temos 2 semaforos, 8 e 9
+
 VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H        ; (R/W) valores atribuidos anteriormente (iniciados a 0)
 VALOR_ANTERIOR_SEMAFOROS07    EQU 0H
 VALOR_ANTERIOR_SEMAFOROS89    EQU 0H
@@ -77,6 +79,8 @@ VALOR_COMBOIOS_PARADOS        EQU 0H
 
 VALOR_ALTERAR_SEMAFORO_8      EQU 1H
 VALOR_ALTERAR_SEMAFORO_9      EQU 2H
+
+NENHUM EQU 0H
 
 
 ;*****************************************************************************************************************
@@ -93,7 +97,7 @@ VALOR_ALTERAR_SEMAFORO_9      EQU 2H
 
 PLACE     1000H
 
-pilha:      TABLE 100H                      ; espaco reservado para a pilha (200H bytes, pois sao 100H words)
+pilha:      TABLE 200H                      ; espaco reservado para a pilha (200H bytes, pois sao 100H words)
 SP_inicial:                                 ; este e o endereco (1200H) com que o SP deve ser inicializado.
                                             ; O 1º end. de retorno será armazenado em 11FEH (1200H-2H)
 
@@ -134,7 +138,9 @@ troco:
   STRING    DESOCUPADO
   STRING    DESOCUPADO
   
-  
+valores_semaforos: ; tabela usada para atribuir os valores aos semaforos
+  STRING NENHUM 
+  STRING NENHUM
 
 ;*******************************************************************************************************
 ; Programa Principal
@@ -146,7 +152,7 @@ MOV SP, SP_inicial
 
 pre_start:
 CALL inicializar_comboios
-
+CALL alterar_os_semaforos_8_e_9
 start:
 
 MOV R4, 0H                                   ; contador para aceder a tabela 
@@ -182,6 +188,27 @@ CALL mover_comboios
 POP R7
 POP R3
 RET
+
+;------------------------------------------------------------------------------------------------------
+alterar_os_semaforos_8_e_9:
+
+PUSH R3
+PUSH R7
+
+MOV R3, valores_semaforos
+MOV R7, VALOR_ALTERAR_SEMAFORO_8
+MOVB [R3], R7 
+CALL semaforos8F
+
+MOV R3, valores_semaforos
+MOV R7, VALOR_ALTERAR_SEMAFORO_9
+MOVB [R3], R7
+CALL semaforos8F
+
+POP R7
+POP R3
+RET
+
 
 ;******************************************************************************************************
 ; Rotinas de verificacao 
@@ -539,16 +566,19 @@ PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
+PUSH R6
 PUSH R9
 PUSH R10
 
-MOV R2, TECLADO8F
+MOV R2, valores_semaforos
 MOV R3, SEMAFOROS
 MOV R4, 8H                                  ; inicializar o contador a 8
 MOV R5, cores_semaforos                     ; colocar no argumento R5 da funcao o endereço da tabela 
-MOV R9, CINZENTO
-MOV R10, VERMELHO
+MOV R6, MASCARA_SEMAFORO_8_9
+MOV R10, CINZENTO
+MOV R9, VERMELHO
 MOVB R0, [R2]                               ; mover os valores do teclado para R1
+AND R0, R6
 
 CMP R0, 0
 JZ fim_semaforos8F
@@ -560,6 +590,7 @@ CALL le_botoes
 fim_semaforos8F:
 POP R10
 POP R9
+POP R6
 POP R5
 POP R4
 POP R3
