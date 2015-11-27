@@ -369,6 +369,33 @@ POP R2
 ADD R4,1H                                   ; aumenta o contador para aceder ao endereco abaixo na proxima comparacao
 RET
 
+;---------------------------------------------------------------------------------------------------------------------
+
+ligar_passagem_de_nivel:
+PUSH R8
+
+MOV R5, valor_interrupcao1
+MOV R6, OFF
+MOV R7, ON
+MOV R8, flag_interrupcao_1
+
+CMP R8, OFF
+JZ segundo
+CMP R5, OFF
+
+primeiro:
+CALL alterar_o_semaforo_8
+
+segundo:
+CALL alterar_o_semaforo_9
+
+fim_ligar_passagem_de_nivel:
+MOV [R8], R7
+MOV [R5], R6
+
+POP R8
+RET
+
 ;****************************************************************************************************************************************
 ; Mover Comboios
 ;****************************************************************************************************************************************
