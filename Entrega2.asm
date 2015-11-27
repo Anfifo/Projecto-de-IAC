@@ -1,4 +1,4 @@
-***************;
+;******************************;
 ;*        Grupo 33:           *;
 ;* Andre Fonseca     84698    *;
 ;* Catarina Custodio 84705    *;
@@ -97,19 +97,19 @@ NENHUM EQU 0H
 
 PLACE     1000H
 
-pilha:      TABLE 200H                      ; espaco reservado para a pilha (200H bytes, pois sao 100H words)
-SP_inicial:                                 ; este e o endereco (1200H) com que o SP deve ser inicializado.
-                                            ; O 1º end. de retorno será armazenado em 11FEH (1200H-2H)
+pilha:      TABLE 200H                    ; espaco reservado para a pilha (200H bytes, pois sao 100H words)
+SP_inicial:                               ; este e o endereco (1200H) com que o SP deve ser inicializado.
+                                          ; O 1º end. de retorno será armazenado em 11FEH (1200H-2H)
 
-estados_agulhas:                            ; tabela para os estados das agulhas (DIREITA e ESQUERDA).
-                                            ; 01 ESQUERDA, 10 DIREITA
+estados_agulhas:                          ; tabela para os estados das agulhas (DIREITA e ESQUERDA).
+                                          ; 01 ESQUERDA, 10 DIREITA
   STRING    DIREITA                       ; agulha 0
   STRING    DIREITA                       ; agulha 1
   STRING    DIREITA                       ; agulha 2
   STRING    DIREITA                       ; agulha 3
 
-cores_semaforos:                            ; tabela para as cores dos semáforos (VERDE, CINZENTO ou VERMELHO).
-                                            ; 00 cinzento, 01 vermelho, 10 verde, 11 amarelo.
+cores_semaforos:                          ; tabela para as cores dos semáforos (VERDE, CINZENTO ou VERMELHO).
+                                          ; 00 cinzento, 01 vermelho, 10 verde, 11 amarelo.
   STRING    VERDE                         ; cor do semáforo 0
   STRING    VERDE                         ; cor do semáforo 1
   STRING    VERDE                         ; cor do semáforo 2
@@ -121,7 +121,7 @@ cores_semaforos:                            ; tabela para as cores dos semáforo
   STRING    VERDE                         ; cor do semáforo 8
   STRING    VERDE                         ; cor do semáforo 9
 
-valores_anteriores:                         ; tabela com os valores anteriores para comparacao
+valores_anteriores:                       ; tabela com os valores anteriores para comparacao
     
   STRING      VALOR_ANTERIOR_MOVER_COMBOIOS
   STRING      VALOR_ANTERIOR_SEMAFOROS07
@@ -138,7 +138,7 @@ troco:
   STRING    DESOCUPADO
   STRING    DESOCUPADO
   
-valores_semaforos: ; tabela usada para atribuir os valores aos semaforos
+valores_semaforos:                      ; tabela usada para atribuir os valores aos semaforos
   STRING NENHUM 
   STRING NENHUM
 
@@ -232,7 +232,7 @@ MOV R2, BARRAS_VELOCIDADE
 CALL antes_de_comparar
 
 CMP R8,R9
-JNZ fim_verificar_mudanca_mover_comboios            ; caso nao haja mudanca saltamos para o teclado 
+JNZ fim_verificar_mudanca_mover_comboios    ; caso nao haja mudanca saltamos para o teclado 
 CALL mover_comboios                         ; caso haja mudanca chamamos a rotina que trata de mover os comboios
 
 fim_verificar_mudanca_mover_comboios: 
@@ -250,7 +250,7 @@ MOV R2, TECLADO07
 CALL antes_de_comparar
 
 CMP R8,R9
-JZ fim_verificar_mudanca_semaforos07            ; caso nao haja mudanca saltamos para o teclado 8 a F 
+JZ fim_verificar_mudanca_semaforos07        ; caso nao haja mudanca saltamos para o teclado 8 a F 
 CALL semaforos07                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 0 a 7
 
 fim_verificar_mudanca_semaforos07:
@@ -268,7 +268,7 @@ MOV R2, valores_semaforos
 CALL antes_de_comparar
 
 CMP R8,R9
-JZ fim_verificar_mudanca_semaforos8F                ; caso nao haja mudanca saltamos para os botoes de Pressao
+JZ fim_verificar_mudanca_semaforos8F        ; caso nao haja mudanca saltamos para os botoes de Pressao
 CALL semaforos8F                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 8 e 9
 
 fim_verificar_mudanca_semaforos8F:
@@ -286,7 +286,7 @@ MOV R2, BOTOES_PRESSAO
 CALL antes_de_comparar
 
 CMP R8,R9
-JZ fim_verificar_mudanca_agulhas               ; caso nao haja mudanca saltamos para os Sensores
+JZ fim_verificar_mudanca_agulhas            ; caso nao haja mudanca saltamos para os Sensores
 CALL agulhas
 
 fim_verificar_mudanca_agulhas:
@@ -377,11 +377,11 @@ MOV R10, SENTIDO_NEGATIVO_COMBOIO                   ; corresponde ao valor 80H
 MOVB R7,[R1]
 
 comboio_1:
-MOV R0, COMBOIO_1                                  ;comboio 1
+MOV R0, COMBOIO_1                                   ; comboio 1
 CALL calcula_e_escreve_valor_comboio
 
 comboio_0:
-MOV R0, COMBOIO_0                                   ;comboio 0
+MOV R0, COMBOIO_0                                   ; comboio 0
 SHR R7,4                                            ; shift para a direita para usarmos apenas os bits de maior peso do comboio 1 
 CALL calcula_e_escreve_valor_comboio
 
@@ -424,9 +424,9 @@ por_sentido_negativo_do_comboio:
 ADD R7, R10 
 
 escreve_comboio: 
-AND R7,R9                                   ; limpar os bits nao necessarios
-MOVB [R2],R0                                ; escolher o comboio e operacao de mudar sentido
-MOVB [R3],R7                                ; escrever a mudanca de sentido e velocidade
+AND R7,R9                                  ; limpar os bits nao necessarios
+MOVB [R2],R0                               ; escolher o comboio e operacao de mudar sentido
+MOVB [R3],R7                               ; escrever a mudanca de sentido e velocidade
 
 POP R10
 POP R8
