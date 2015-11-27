@@ -82,7 +82,6 @@ VALOR_ALTERAR_SEMAFORO_9      EQU 2H
 
 NENHUM EQU 0H
 
-
 ;*****************************************************************************************************************
 ; Tabelas
 ;*****************************************************************************************************************
@@ -140,6 +139,16 @@ troco:
   
 valores_semaforos:                      ; tabela usada para atribuir os valores aos semaforos
   WORD  NENHUM 
+  
+ultimo_sensor_ativo_comboio0:           ; guardar o ultimo sensor pelo qual o comboio 0 passou
+WORD  NENHUM
+
+ultimo_sensor_ativo_comboio1:           ; guardar o ultimo sensor pelo qual o comboio 1 passou
+WORD NENHUM
+
+tabela_interrupcoes:
+WORD  interrupcao0
+WORD  interrupcao1
 
 ;*******************************************************************************************************
 ; Programa Principal
@@ -148,6 +157,7 @@ valores_semaforos:                      ; tabela usada para atribuir os valores 
 ;*******************************************************************************************************
 PLACE 0000H
 MOV SP, SP_inicial
+MOV BTE, tabela_interrupcoes
 
 pre_start:
 CALL inicializar_comboios
@@ -165,6 +175,7 @@ CALL verificar_mudanca_semaforos07
 CALL verificar_mudanca_semaforos8F
 CALL verificar_mudanca_agulhas
 CALL verificar_mudanca_sensores
+CALL verificar_ultimo_sensor
 
 JMP start
 
@@ -310,7 +321,21 @@ fim_verificar_mudanca_sensores:
 POP R9
 POP R8
 RET
+;--------------------------------------------------------------------------------------------------------
 
+verificar_ultimo_sensor:
+
+sensor8_comboio0:
+MOV R5, ultimo_sensor_ativo_comboio0
+MOV R8, [R5]
+MOV R9, 08H
+
+CMP R8, R9
+JNZ fim_sensor_8_comboio0 
+CALL piscar_semaforos
+
+fim_sensor_8_comboio0:
+RET
 
 ;**************************************************************************************************************************************
 ; Rotina Auxiliar a Rotina de verificacao 
@@ -753,10 +778,18 @@ MOV R0, TRANSFORMADOR_ASCII
 MOV R1, INFORMACAO_SENSORES
 MOV R2, LCD_SUPERIOR
 MOV R3, LCD_INFERIOR
+MOV R5, ultimo_sensor_ativo_comboio0
+MOV R6, ultimo_sensor_ativo_comboio1
 
 MOVB R8, [R1]                               ; 1º byte (informacão sobre o comboio que passou)
 MOVB R9, [R1]                               ; 2º byte (valor do sensor pelo qual passou)
 
+MOVB R8, [R1]
+MOVB R9, [R1]
+
+MOV R7, R9
+
+transformar_para_ASCII:
 MOV R0, TRANSFORMADOR_ASCII                 ; somar 30H para transformar em codigo ASCII os numeros 0-9
 ADD R9,R0
 
@@ -764,15 +797,17 @@ BIT R8, 0                                   ; nao contamos o bit a 1 que e a par
 JNZ fim_sensores
 
 BIT R8, 1                                   ; bit que diz qual o comboio 
-JZ sensor_comboio_0
+JZ escrever_sensor_comboio_0
 
 
-sensor_comboio_1:
+escrever_sensor_comboio_1:
 MOVB [R3], R9
+MOV [R6], R7
 JMP fim_sensores
 
-sensor_comboio_0:
+escreve_sensor_comboio_0:
 MOVB [R2], R9
+MOV [R5], R7
 
 fim_sensores:
 POP R10
