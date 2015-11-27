@@ -138,9 +138,9 @@ troco:
   STRING    DESOCUPADO
   STRING    DESOCUPADO
   
-valores_semaforos: ; tabela usada para atribuir os valores aos semaforos
-  STRING NENHUM 
-  STRING NENHUM
+;valores_semaforos: ; tabela usada para atribuir os valores aos semaforos
+ ; STRING NENHUM 
+  ;STRING NENHUM
 
 ;*******************************************************************************************************
 ; Programa Principal
@@ -152,7 +152,7 @@ MOV SP, SP_inicial
 
 pre_start:
 CALL inicializar_comboios
-CALL alterar_os_semaforos_8_e_9
+;CALL alterar_os_semaforos_8_e_9
 start:
 
 MOV R4, 0H                                   ; contador para aceder a tabela 
@@ -183,31 +183,28 @@ PUSH R7
 MOV R3, BARRAS_VELOCIDADE
 MOV R7, VALOR_COMBOIOS_FRENTE
 MOVB [R3], R7 
-CALL mover_comboios
-
 POP R7
 POP R3
 RET
 
 ;------------------------------------------------------------------------------------------------------
-alterar_os_semaforos_8_e_9:
+;alterar_os_semaforos_8_e_9:
 
-PUSH R3
-PUSH R7
+;PUSH R3
+;PUSH R7
+;MOV R3, valores_semaforos
+;MOV R7, VALOR_ALTERAR_SEMAFORO_8
+;MOVB [R3], R7 
+;CALL semaforos8F
 
-MOV R3, valores_semaforos
-MOV R7, VALOR_ALTERAR_SEMAFORO_8
-MOVB [R3], R7 
-CALL semaforos8F
+;MOV R3, valores_semaforos
+;MOV R7, VALOR_ALTERAR_SEMAFORO_9
+;MOVB [R3], R7
+;CALL semaforos8F
 
-MOV R3, valores_semaforos
-MOV R7, VALOR_ALTERAR_SEMAFORO_9
-MOVB [R3], R7
-CALL semaforos8F
-
-POP R7
-POP R3
-RET
+;POP R7
+;POP R3
+;RET
 
 
 ;******************************************************************************************************
@@ -219,6 +216,9 @@ RET
 ;
 ;*******************************************************************************************************
 verificar_mudanca_mover_comboios:           ; verificar se houve mudanca nos valores dos sliders
+PUSH R8
+PUSH R9
+
 MOV R2, BARRAS_VELOCIDADE
 CALL antes_de_comparar
 
@@ -227,10 +227,16 @@ JNZ fim_verificar_mudanca_mover_comboios            ; caso nao haja mudanca salt
 CALL mover_comboios                         ; caso haja mudanca chamamos a rotina que trata de mover os comboios
 
 fim_verificar_mudanca_mover_comboios: 
+POP R9
+POP R8
+
 RET
 
 ;-------------------------------------------------------------------------------------------------------
 verificar_mudanca_semaforos07:              ; verificar se houve mudanca nos valores do teclado 0 a 7
+PUSH R8
+PUSH R9
+
 MOV R2, TECLADO07
 CALL antes_de_comparar
 
@@ -239,10 +245,16 @@ JZ fim_verificar_mudanca_semaforos07            ; caso nao haja mudanca saltamos
 CALL semaforos07                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 0 a 7
 
 fim_verificar_mudanca_semaforos07:
+POP R9
+POP R8
+
 RET
 
 ;--------------------------------------------------------------------------------------------------------
 verificar_mudanca_semaforos8F:              ; verificar se houve mudanca dos valores no teclado 8 a F
+PUSH R8
+PUSH R9
+
 MOV R2, TECLADO8F
 CALL antes_de_comparar
 
@@ -251,10 +263,16 @@ JZ fim_verificar_mudanca_semaforos8F                ; caso nao haja mudanca salt
 CALL semaforos8F                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 8 e 9
 
 fim_verificar_mudanca_semaforos8F:
+POP R9
+POP R8
+
 RET
 
 ;--------------------------------------------------------------------------------------------------------
 verificar_mudanca_agulhas:                  ; verificar se houve mudanca nos valores dos botoes de Pressao
+PUSH R8
+PUSH R9
+
 MOV R2, BOTOES_PRESSAO
 CALL antes_de_comparar
 
@@ -263,10 +281,16 @@ JZ fim_verificar_mudanca_agulhas               ; caso nao haja mudanca saltamos 
 CALL agulhas
 
 fim_verificar_mudanca_agulhas:
+POP R9
+POP R8
+
 RET
 
 ;--------------------------------------------------------------------------------------------------------
 verificar_mudanca_sensores:                 ; iniciar a leitura dos sensores caso haja pelo menos 1 evento
+PUSH R8
+PUSH R9
+
 MOV R2, NUMERO_EVENTOS_SENSORES
 MOVB R8, [R2]
 
@@ -275,6 +299,8 @@ JZ fim_verificar_mudanca_sensores
 CALL sensores 
 
 fim_verificar_mudanca_sensores:
+POP R9
+POP R8
 RET
 
 
@@ -325,6 +351,9 @@ PUSH R0
 PUSH R1
 PUSH R2
 PUSH R3
+PUSH R4
+PUSH R5
+PUSH R6
 PUSH R7
 PUSH R8
 PUSH R9
@@ -353,6 +382,9 @@ POP R10
 POP R9
 POP R8
 POP R7
+POP R6
+POP R5
+POP R4
 POP R3
 POP R2
 POP R1
@@ -420,9 +452,12 @@ RET
 semaforos07:
 PUSH R0
 PUSH R1
+PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
+PUSH R6
+PUSH R7
 PUSH R8
 PUSH R9
 PUSH R10
@@ -446,9 +481,12 @@ fim_semaforos07:
 POP R10
 POP R9
 POP R8
+POP R7
+POP R6
 POP R5
 POP R4
 POP R3
+POP R2
 POP R1
 POP R0
 RET
@@ -562,15 +600,18 @@ RET
 ;****************************************************************************************************************************
 semaforos8F:
 PUSH R0
+PUSH R1
 PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
 PUSH R6
+PUSH R7
+PUSH R8
 PUSH R9
 PUSH R10
 
-MOV R2, valores_semaforos
+MOV R2, TECLADO8F
 MOV R3, SEMAFOROS
 MOV R4, 8H                                  ; inicializar o contador a 8
 MOV R5, cores_semaforos                     ; colocar no argumento R5 da funcao o endereço da tabela 
@@ -590,11 +631,14 @@ CALL le_botoes
 fim_semaforos8F:
 POP R10
 POP R9
+POP R8
+POP R7
 POP R6
 POP R5
 POP R4
 POP R3
 POP R2
+POP R1
 POP R0
 RET
 
@@ -627,10 +671,13 @@ agulhas:
 
 PUSH R0
 PUSH R1
+PUSH R2
 PUSH R3
 PUSH R4
 PUSH R5
 PUSH R6
+PUSH R7
+PUSH R8
 PUSH R9
 PUSH R10
 
@@ -653,10 +700,13 @@ CALL le_botoes
 fim_agulhas:
 POP R10
 POP R9
+POP R8
+POP R7
 POP R6
 POP R5
 POP R4
 POP R3
+POP R2
 POP R1
 POP R0
 RET
@@ -682,8 +732,13 @@ PUSH R0
 PUSH R1
 PUSH R2
 PUSH R3
+PUSH R4
+PUSH R5
+PUSH R6
+PUSH R7
 PUSH R8
 PUSH R9
+PUSH R10
 
 MOV R0, TRANSFORMADOR_ASCII
 MOV R1, INFORMACAO_SENSORES
@@ -711,8 +766,13 @@ sensor_comboio_0:
 MOVB [R2], R9
 
 fim_sensores:
+POP R10
 POP R9
 POP R8
+POP R7
+POP R6
+POP R5
+POP R4
 POP R3
 POP R2
 POP R1
