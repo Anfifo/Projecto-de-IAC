@@ -79,6 +79,9 @@ VALOR_ALTERAR_SEMAFORO_9      EQU 2H
 NUMERO_SEMAFORO_8 EQU 8H
 NUMERO_SEMAFORO_9 EQU 9H
 
+VALOR_3_SEGUNDOS EQU 6H                         ; 3 segundos correspondem a 6 vezes meio segundo
+
+NENHUM_SENSOR EQU 0FFFFH
 ;*****************************************************************************************************************
 ; Tabelas
 ;*****************************************************************************************************************
@@ -140,6 +143,9 @@ valor_velocidade_comboio0:
 valor_velocidade_comboio1:
   WORD VALOR_COMBOIO_A_ANDAR
 
+valores_semaforos_0_7: ; tabela usada para alterar a cor dos semaforos
+  WORD NENHUM
+
 valores_semaforos_8_9: ; tabela usada para atribuir os valores aos semaforos
   WORD NENHUM 
 
@@ -158,7 +164,10 @@ ultimo_sensor_activo_comboio_1_tras: ; endereço no qual guardamos o ultimo sens
 valor_interrupcao1: ; esta a off se a interrupcao estiver desligada, esta a on se a interrupcao estiver ligada
   WORD OFF
 
-flag_interrupcao_1: ; esta a off se for a primeira vez que se inicia a interrupcao
+flag_interrupcao1_sensores: ; esta a off se for a primeira vez que se inicia a interrupcao
+  WORD OFF
+
+contador_interrupcao1_paragem:
   WORD OFF
 
 ;*******************************************************************************************************
@@ -308,6 +317,7 @@ RET
 ;---------------------------------------------------------------------------------------------------------
 
 verificar_ultimo_sensor:
+PUSH R1
 PUSH R5
 
 verificar_sensor_8_comboio0:
@@ -326,10 +336,19 @@ verificar_sensor_9_comboio1:
 MOV R5, ultimo_sensor_activo_comboio1
 CALL sensor_9_comboio
 
+verficar_sensor_2_ou_5_comboio0:
+MOV R1, COMBOIO_0
+MOV R5, ultimo_sensor_activo_comboio0
+CALL sensor_2_ou_5_comboio
 
+verficar_sensor_2_ou_5_comboio1:
+MOV R1, COMBOIO_1
+MOV R5, ultimo_sensor_activo_comboio1
+CALL sensor_2_ou_5_comboio
 
 fim_verificar_ultimo_sensor:
 POP R5
+POP R1
 RET
 
 ;***************************************************************************************************************************************
@@ -374,7 +393,7 @@ PUSH R6
 PUSH R7
 PUSH R8
 
-MOV R2, flag_interrupcao_1 ; se a flag da interrupcao 1 estiver off quer dizer que e a primeira vez que esta activa por isso muda apenas 1 semaforo
+MOV R2, flag_interrupcao1_sensores ; se a flag da interrupcao 1 estiver off quer dizer que e a primeira vez que esta activa por isso muda apenas 1 semaforo
 MOV R3, valor_interrupcao1 ; se houve uma interrupcao activa este valor vai estar a on
 MOV R6, OFF
 MOV R7, ON
@@ -443,7 +462,7 @@ PUSH R8
 PUSH R9
 PUSH R10
 
-MOV R2, flag_interrupcao_1 ; voltar a por a flag a off, para quando um comboio passar pela primeira vez 
+MOV R2, flag_interrupcao1_sensores ; voltar a por a flag a off, para quando um comboio passar pela primeira vez 
 MOV R3, OFF
 MOV R8, [R5]
 MOV R9, 09H
@@ -468,14 +487,95 @@ POP R2
 RET
 
 ;---------------------------------------------------------------------------------------------------------------------------------------
+sensor_2_ou_5_comboio:
+PUSH R0
+PUSH R5
+PUSH R8
+PUSH R9
+PUSH R10
 
-para_comboio0:
+MOV R0, NENHUM_SENSOR                    ;para apagar o ultimo sensor lido
+MOV R2, contador_interrupcao1_paragem
+MOV R4, [R2]
+MOV R6, VALOR_3_SEGUNDOS
+MOV R7, 0H
+MOV R8, [R5]                              ; valor do ultimo sensor activo
+MOV R9, 02H                               ;ver se o sensor 2 esta ligado
+MOV R10, 05H                              ; ver se o sensor 5 esta ligado 
 
-para_comboio1:
+CMP R8, R9 
+JZ pre_espera_paragem 
 
-arranca_comboio0:
+CMP R8, R9
+JNZ fim_sensor_2_ou_5_comboio 
 
-arranca_comboio1:
+pre_espera_paragem:
+CMP R4, R6
+JNZ inicio_espera_paragem
+
+MOV [R2], R7                            ; por o contador de novo a zero
+MOV [R5], R0                            ; apagar o ultimo sensor lido deste comboio para nao iniciar o loop 
+JMP fim_sensor_2_ou_5_comboio
+
+inicio_espera_paragem:
+EI1
+EI
+CALL espera_paragem  ; se for 2 ou 5 iniciamos uma paragem
+
+fim_sensor_2_ou_5_comboio:
+POP R10
+POP R9
+POP R8
+POP R5
+POP R0
+RET
+
+;---------------------------------------------------------------------------------------------------------------------------------------
+espera_paragem: ;recebe o R1 que determina se é o comboio 1 ou 0 
+PUSH R1
+PUSH R2
+PUSH R3
+PUSH R5
+PUSH R6
+PUSH R7
+PUSH R8
+
+MOV R2, contador_interrupcao1_paragem ; se a flag da interrupcao 1 estiver off quer dizer que e a primeira vez que esta activa por isso muda apenas 1 semaforo
+MOV R3, valor_interrupcao1 ; se houve uma interrupcao activa este valor vai estar a on
+MOV R6, OFF
+MOV R7, ON
+MOV R8,[R2]
+MOV R9,[R3]
+
+CMP R9, OFF                         ;a interrupcao estava a OFF por isso nao fazemos nada.
+JZ fim_espera_paragem
+
+CMP R8, 0H
+JNZ aumentar_contador_espera            ; se o contador ja tiver sido iniciado, entao ja esta parado, vamos so aumentar o contador
+
+para_o_comboio_R1:
+MOV R0, R1
+MOV R7, VALOR_COMBOIOS_PARADO
+CALL calcula_e_escreve_valor_comboio
+
+aumentar_contador_espera:
+ADD R8, 1
+MOV [R2], R8
+MOV [R3], R6                     ; valor da interrupcao foi usado por isso poe a OFF 
+
+fim_espera_paragem:
+POP R8
+POP R7
+POP R6
+POP R5
+POP R3
+POP R2
+POP R1
+RET
+
+
+;---------------------------------------------------------------------------------------------------------------------------------------
+
 
 
 
