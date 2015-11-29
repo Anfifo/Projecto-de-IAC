@@ -1008,7 +1008,7 @@ BIT R8, 0                                   ; nao contamos o bit a 1 que e a par
 JNZ fim_sensores
 
 BIT R8, 1                                   ; bit que diz qual o comboio 
-JZ escreve_sensor_comboio_1
+JNZ escreve_sensor_comboio_1
 
 escreve_sensor_comboio_0:
 MOV R3, LCD_SUPERIOR
@@ -1025,17 +1025,17 @@ JMP fim_sensores
 
 escreve_sensores_tras:
 BIT R8, 1                                   ; bit que diz qual o comboio 
-JZ escreve_sensor_comboio_1
+JNZ escreve_sensor_comboio_1_tras
 
 
 escreve_sensor_comboio_0_tras:
 MOV R5, ultimo_sensor_activo_comboio0_tras
-MOV R5, R7
+MOV [R5], R7
 JMP fim_sensores
 
-escrever_sensor_comboio_1_tras:
+escreve_sensor_comboio_1_tras:
 MOV R5, ultimo_sensor_activo_comboio_1_tras
-MOV R5, R7
+MOV [R5], R7
 
 fim_sensores:
 POP R10
