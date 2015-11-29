@@ -70,16 +70,8 @@ MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H
 MASCARA_BOTOES_AGULHAS EQU 0FH              ; filtrar os bits que nao sejam os primeiros 4 das agulhas, pois so temos 4 agulhas para mudar 
 MASCARA_SEMAFORO_8_9 EQU 3H                 ; filtrar os bits que nao sejam os primeiros 2 pois so temos 2 semaforos, 8 e 9
 
-VALOR_ANTERIOR_MOVER_COMBOIOS EQU 0H        ; (R/W) valores atribuidos anteriormente (iniciados a 0)
-VALOR_ANTERIOR_SEMAFOROS07    EQU 0H
-VALOR_ANTERIOR_SEMAFOROS89    EQU 0H
-VALOR_ANTERIOR_AGULHAS        EQU 0H
-VALOR_ANTERIOR_SENSOR         EQU 0H
-
-VALOR_COMBOIOS_FRENTE         EQU 33H       ; corresponde a 00110011b
-VALOR_COMBOIO_0_PARADO        EQU 03H       ; corresponde a 00000011b
-VALOR_COMBOIO_1_PARADO        EQU 30H       ; corresponde a 00110000b
-VALOR_COMBOIOS_PARADOS        EQU 0H
+VALOR_COMBOIO_A_ANDAR        EQU 03H       ; corresponde a 00000011b
+VALOR_COMBOIOS_PARADO        EQU 0H
 
 VALOR_ALTERAR_SEMAFORO_8      EQU 1H
 VALOR_ALTERAR_SEMAFORO_9      EQU 2H
@@ -125,12 +117,8 @@ cores_semaforos:                            ; tabela para as cores dos semáforo
   STRING    VERDE                         ; cor do semáforo 8
   STRING    VERDE                         ; cor do semáforo 9
 
-valores_anteriores:                         ; tabela com os valores anteriores para comparacao
-    
-  STRING      VALOR_ANTERIOR_MOVER_COMBOIOS
-  STRING      VALOR_ANTERIOR_SEMAFOROS07
-  STRING      VALOR_ANTERIOR_SEMAFOROS89
-  STRING      VALOR_ANTERIOR_AGULHAS
+valores_anteriores_agulhas:        
+  WORD NENHUM
 
 troco:
   STRING    DESOCUPADO
@@ -146,13 +134,25 @@ tabela_interrupcoes:
   WORD interrupcao0
   WORD interrupcao1
 
+valor_velocidade_comboio0:
+  WORD VALOR_COMBOIO_A_ANDAR
+
+valor_velocidade_comboio1:
+  WORD VALOR_COMBOIO_A_ANDAR
+
 valores_semaforos_8_9: ; tabela usada para atribuir os valores aos semaforos
   WORD NENHUM 
 
 ultimo_sensor_activo_comboio0: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 0 passou
   WORD NENHUM 
 
+ultimo_sensor_activo_comboio0_tras: ; endereco onde guardamos o ultimo sensor pela qual a traseira do comboio 0 passou
+  WORD NENHUM
+
 ultimo_sensor_activo_comboio1: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 1 passou
+  WORD NENHUM
+
+ultimo_sensor_activo_comboio_1_tras: ; endereço no qual guardamos o ultimo sensor pelo qual a traseira do comboio 1 passou
   WORD NENHUM
 
 valor_interrupcao1: ; esta a off se a interrupcao estiver desligada, esta a on se a interrupcao estiver ligada
@@ -177,12 +177,9 @@ CALL por_semaforos_a_cinzento
 start:
 
 MOV R4, 0H                                   ; contador para aceder a tabela 
-MOV R5, valores_anteriores                   ; endereco com a tabela dos valores anteriores
+MOV R5, valores_anteriores_agulhas                   ; endereco com a tabela dos valores anteriores
 
 ciclo:
-CALL verificar_mudanca_mover_comboios
-CALL verificar_mudanca_semaforos07
-CALL verificar_mudanca_semaforos8F
 CALL verificar_mudanca_agulhas
 CALL verificar_mudanca_sensores
 CALL verificar_ultimo_sensor
@@ -199,14 +196,8 @@ JMP start
 ;******************************************************************************************************
 
 inicializar_comboios:
-PUSH R3
-PUSH R7
-
-MOV R3, BARRAS_VELOCIDADE
-MOV R7, VALOR_COMBOIOS_FRENTE
-MOVB [R3], R7 
-POP R7
-POP R3
+CALL comboio_0_frente
+CALL comboio_1_frente
 RET
 
 ;------------------------------------------------------------------------------------------------------
@@ -238,29 +229,29 @@ POP R4
 POP R3
 RET
 
-;------------------------------------------------------------------------------------------------------
-alterar_o_semaforo_8:
-
-PUSH R3
-PUSH R7
-MOV R3, valores_semaforos_8_9
-MOV R7, VALOR_ALTERAR_SEMAFORO_8
-MOV [R3], R7 
-CALL semaforos8F
-POP R7
-POP R3
-RET
-
-alterar_o_semaforo_9:
-PUSH R3
+;-----------------------------------------------------------------------------------------------------
+comboio_0_frente:
+PUSH R0
 PUSH R7
 
-MOV R3, valores_semaforos_8_9
-MOV R7, VALOR_ALTERAR_SEMAFORO_9
-MOV [R3], R7
-CALL semaforos8F
+MOV R0, COMBOIO_0
+MOV R7, VALOR_COMBOIO_A_ANDAR
+CALL calcula_e_escreve_valor_comboio
+
 POP R7
-POP R3
+POP R0
+RET 
+
+comboio_1_frente:
+PUSH R0
+PUSH R7
+
+MOV R0, COMBOIO_1
+MOV R7, VALOR_COMBOIO_A_ANDAR
+CALL calcula_e_escreve_valor_comboio
+
+POP R7
+POP R0
 RET
 
 
@@ -272,75 +263,30 @@ RET
 ; Argumentos: contador (R4) valores_anteriores(R5)        | Retorna: nada
 ;
 ;******************************************************************************************************
-verificar_mudanca_mover_comboios:           ; verificar se houve mudanca nos valores dos sliders
-PUSH R8
-PUSH R9
-
-MOV R2, BARRAS_VELOCIDADE
-CALL antes_de_comparar
-
-CMP R8,R9
-JNZ fim_verificar_mudanca_mover_comboios            ; caso nao haja mudanca saltamos para o teclado 
-CALL mover_comboios                         ; caso haja mudanca chamamos a rotina que trata de mover os comboios
-
-fim_verificar_mudanca_mover_comboios: 
-POP R9
-POP R8
-
-RET
-
-;-------------------------------------------------------------------------------------------------------
-verificar_mudanca_semaforos07:              ; verificar se houve mudanca nos valores do teclado 0 a 7
-PUSH R8
-PUSH R9
-
-MOV R2, TECLADO07
-CALL antes_de_comparar
-
-CMP R8,R9
-JZ fim_verificar_mudanca_semaforos07            ; caso nao haja mudanca saltamos para o teclado 8 a F 
-CALL semaforos07                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 0 a 7
-
-fim_verificar_mudanca_semaforos07:
-POP R9
-POP R8
-
-RET
-
-;--------------------------------------------------------------------------------------------------------
-verificar_mudanca_semaforos8F:              ; verificar se houve mudanca dos valores no teclado 8 a F
-PUSH R8
-PUSH R9
-
-MOV R2, valores_semaforos_8_9
-CALL antes_de_comparar
-
-CMP R8,R9
-JZ fim_verificar_mudanca_semaforos8F                ; caso nao haja mudanca saltamos para os botoes de Pressao
-CALL semaforos8F                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 8 e 9
-
-fim_verificar_mudanca_semaforos8F:
-POP R9
-POP R8
-
-RET
 
 ;--------------------------------------------------------------------------------------------------------
 verificar_mudanca_agulhas:                  ; verificar se houve mudanca nos valores dos botoes de Pressao
+PUSH R2
+PUSH R5
 PUSH R8
 PUSH R9
 
+
 MOV R2, BOTOES_PRESSAO
-CALL antes_de_comparar
+MOV R5, valores_anteriores_agulhas
+MOVB R8, [R2]
+MOV R9, [R5]
 
 CMP R8,R9
 JZ fim_verificar_mudanca_agulhas               ; caso nao haja mudanca saltamos para os Sensores
+MOV [R5], R8                                   ; escreve na tabela o valor anterior
 CALL agulhas
 
 fim_verificar_mudanca_agulhas:
 POP R9
 POP R8
-
+POP R5
+POP R2
 RET
 
 ;--------------------------------------------------------------------------------------------------------
@@ -380,6 +326,8 @@ verificar_sensor_9_comboio1:
 MOV R5, ultimo_sensor_activo_comboio1
 CALL sensor_9_comboio
 
+
+
 fim_verificar_ultimo_sensor:
 POP R5
 RET
@@ -394,23 +342,7 @@ RET
 ; Retorna: R8 (R8 <- [R2]) , R9 (R9 <- [R5]), R4 (R4 <- R4+1)
 ;
 ;***************************************************************************************************************************************
-antes_de_comparar:
-PUSH R2
-PUSH R4
-PUSH R5
 
-ADD R5,R4                                   ; soma o contador com o endereco das words para aceder a word desejada
-MOVB R8,[R2]                                ; move o valor no endereco de que estamos a tratar 
-MOVB R9,[R5]                                ; move o valor na tabela dos valores anteriores
-MOVB [R5], R8                               ; escreve na tabela o valor atual para ser usada para a proxima
-
-POP R5
-POP R4
-POP R2
-ADD R4,1H                                   ; aumenta o contador para aceder ao endereco abaixo na proxima comparacao
-RET
-
-;----------------------------------------------------------------------------------------------------------------------------------------
 
 sensor_8_comboio: ; se o comboio passou pelo sensor 8, entao vamos ligar a passagem de nivel, caso contrario nao fazemos nada
 PUSH R5
@@ -472,6 +404,34 @@ POP R5
 POP R3
 POP R2
 RET 
+;---------------------------------------------------------------------------------------------------------------------------------------
+alterar_o_semaforo_8:
+PUSH R3
+PUSH R7
+
+MOV R3, valores_semaforos_8_9
+MOV R7, VALOR_ALTERAR_SEMAFORO_8
+MOV [R3], R7 
+CALL semaforos8F
+
+POP R7
+POP R3
+RET
+;----------------------------------------------------------------------------------------------------------------------------------------
+
+alterar_o_semaforo_9:
+PUSH R3
+PUSH R7
+
+MOV R3, valores_semaforos_8_9
+MOV R7, VALOR_ALTERAR_SEMAFORO_9
+MOV [R3], R7
+CALL semaforos8F
+POP R7
+POP R3
+RET
+
+
 
 ;----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -507,84 +467,41 @@ POP R3
 POP R2
 RET
 
+;---------------------------------------------------------------------------------------------------------------------------------------
+
+para_comboio0:
+
+para_comboio1:
+
+arranca_comboio0:
+
+arranca_comboio1:
 
 
-;****************************************************************************************************************************************
-; Mover Comboios
-;****************************************************************************************************************************************
-; Processo responsavel pelo movimento dos comboios consoante a barra de velocidades (slider/R1)
-;
-; Arguemntos: Nenhum
-; Retorna: Nada
-;
-; R1:  endereco de barras de velocidades (sliders) de onde lemos qual o comboio (slider superior comboio azul/comboio 0) o sentido e velocidade 
-; R2:  selecao de comboios usado para escolher o comboio e operacao executada (mudar sentido)
-; R3:  endereco de operacao comboio usado para escrever a velocidade e sentido do comboio escolhido pela selecao (R1)
-; R8:  mascara usada para filtrar bits desnecessarios antes de decidir o sentido do comboio
-; R9:  registo com o valor de barra de velocidades para se usar no calculo do comboio 1 sem alterar o comboio 0
-; R10: mascara usada para filtrar bits desncessarios apos calculado o valor que vamos atribuir ao comboio
-;*****************************************************************************************************************************************
-
-mover_comboios:
-PUSH R0
-PUSH R1
-PUSH R2
-PUSH R3
-PUSH R4
-PUSH R5
-PUSH R6
-PUSH R7
-PUSH R8
-PUSH R9
-PUSH R10
-
-MOV R1,  BARRAS_VELOCIDADE
-MOV R2,  SELECAO_COMBOIO
-MOV R3,  OPERACAO_COMBOIO
-MOV R8,  MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR
-MOV R9,  MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
-MOV R10, SENTIDO_NEGATIVO_COMBOIO                   ; corresponde ao valor 80H
-MOVB R7,[R1]
-
-comboio_1:
-MOV R0, COMBOIO_1                                  ;comboio 1
-CALL calcula_e_escreve_valor_comboio
-
-comboio_0:
-MOV R0, COMBOIO_0                                   ;comboio 0
-SHR R7,4                                            ; shift para a direita para usarmos apenas os bits de maior peso do comboio 1 
-CALL calcula_e_escreve_valor_comboio
 
 
-fim_mover_comboio:
-POP R10
-POP R9
-POP R8
-POP R7
-POP R6
-POP R5
-POP R4
-POP R3
-POP R2
-POP R1
-POP R0
-RET
 ;******************************************************************************************************************************
 ; Rotina Auxiliar a mover comboios
 ;******************************************************************************************************************************
 ; Processo responsavel por colocar o valor dos sliders (R7) nos respectivos comboios.
 ;
-; Argumentos: R7 (valor do sentido e velocidade do comboio), R0 (valor respectivo ao numero do comboio)
+; Argumentos: R7 (valor do sentido e velocidade do comboio), R0 (valor respectivo ao numero do comboio), 
 ; Retorna: nada
 ;
 ;******************************************************************************************************************************
 
 calcula_e_escreve_valor_comboio:
 PUSH R0
-PUSH R1
 PUSH R7
 PUSH R8
+PUSH R9
 PUSH R10
+
+MOV R2, SELECAO_COMBOIO
+MOV R3, OPERACAO_COMBOIO
+MOV R8,  MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR
+MOV R9,  MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
+MOV R10, SENTIDO_NEGATIVO_COMBOIO                   ; corresponde ao valor 80H
 
 AND R7, R8                                 ; aplicar a mascara para filtrar os bits desncessarios 
 BIT R7, 3                                  ; ler o bit 3 para ver a direcao dele
@@ -599,9 +516,9 @@ MOVB [R2],R0                                ; escolher o comboio e operacao de m
 MOVB [R3],R7                                ; escrever a mudanca de sentido e velocidade
 
 POP R10
+POP R9
 POP R8
 POP R7
-POP R1
 POP R0
 
 RET
@@ -968,14 +885,8 @@ PUSH R10
 
 MOV R0, TRANSFORMADOR_ASCII
 MOV R1, INFORMACAO_SENSORES
-MOV R2, LCD_SUPERIOR
-MOV R3, LCD_INFERIOR
-MOV R5, ultimo_sensor_activo_comboio0
-MOV R6, ultimo_sensor_activo_comboio1
-
 MOVB R8, [R1]                               ; 1º byte (informacão sobre o comboio que passou)
 MOVB R9, [R1]                               ; 2º byte (valor do sensor pelo qual passou)
-
 MOV R7, R9                                  ; numero do sensor passado nao transformado em ascii
 
 transformar_para_ascii:
@@ -986,17 +897,34 @@ BIT R8, 0                                   ; nao contamos o bit a 1 que e a par
 JNZ fim_sensores
 
 BIT R8, 1                                   ; bit que diz qual o comboio 
-JZ escreve_sensor_comboio_0
-
-
-escreve_sensor_comboio_1:
-MOVB [R3], R9
-MOV [R6], R7
-JMP fim_sensores
+JZ escreve_sensor_comboio_1
 
 escreve_sensor_comboio_0:
-MOVB [R2], R9
-MOV [R5], R7
+MOV R3, LCD_SUPERIOR
+MOV R5, ultimo_sensor_activo_comboio0
+CALL escreve_sensor
+JMP fim_sensores
+
+escreve_sensor_comboio_1:
+MOV R3, LCD_INFERIOR
+MOV R5, ultimo_sensor_activo_comboio1
+CALL escreve_sensor
+JMP fim_sensores
+
+
+escreve_sensores_tras:
+BIT R8, 1                                   ; bit que diz qual o comboio 
+JZ escreve_sensor_comboio_1
+
+
+escreve_sensor_comboio_0_tras:
+MOV R5, ultimo_sensor_activo_comboio0_tras
+MOV R5, R7
+JMP fim_sensores
+
+escrever_sensor_comboio_1_tras:
+MOV R5, ultimo_sensor_activo_comboio_1_tras
+MOV R5, R7
 
 fim_sensores:
 POP R10
@@ -1013,16 +941,25 @@ POP R0
 RET
 
 ;********************************************************************************************************************************
-; Rotinas                                                                                                                       ;
+; Rotinas Auxiliares aos sensores                                                                                                                       ;
 ;********************************************************************************************************************************
 
+escreve_sensor:
+PUSH R7
+PUSH R9
+
+MOVB [R3], R9
+MOV [R5], R7
+
+POP R9
+POP R7
+RET
 
 ;********************************************************************************************************************************
 ; Interrupcoes                                                                                                                  ;
 ;********************************************************************************************************************************
 
 interrupcao0:
-
 RFE
 
 interrupcao1:
@@ -1031,7 +968,6 @@ PUSH R7
 
 MOV R7, ON
 MOV R3, valor_interrupcao1
-
 MOV [R3], R7
 
 POP R7
