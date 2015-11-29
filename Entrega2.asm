@@ -71,7 +71,7 @@ MASCARA_BOTOES_AGULHAS EQU 0FH              ; filtrar os bits que nao sejam os p
 MASCARA_SEMAFORO_8_9 EQU 3H                 ; filtrar os bits que nao sejam os primeiros 2 pois so temos 2 semaforos, 8 e 9
 
 VALOR_COMBOIO_A_ANDAR        EQU 03H       ; corresponde a 00000011b
-VALOR_COMBOIOS_PARADO        EQU 0H
+VALOR_COMBOIO_PARADO        EQU 00H
 
 VALOR_ALTERAR_SEMAFORO_8      EQU 1H
 VALOR_ALTERAR_SEMAFORO_9      EQU 2H
@@ -489,7 +489,11 @@ RET
 ;---------------------------------------------------------------------------------------------------------------------------------------
 sensor_2_ou_5_comboio:
 PUSH R0
+PUSH R2
+PUSH R4
 PUSH R5
+PUSH R6 
+PUSH R7
 PUSH R8
 PUSH R9
 PUSH R10
@@ -506,15 +510,19 @@ MOV R10, 05H                              ; ver se o sensor 5 esta ligado
 CMP R8, R9 
 JZ pre_espera_paragem 
 
-CMP R8, R9
+CMP R8, R10
 JNZ fim_sensor_2_ou_5_comboio 
 
 pre_espera_paragem:
 CMP R4, R6
 JNZ inicio_espera_paragem
-
 MOV [R2], R7                            ; por o contador de novo a zero
 MOV [R5], R0                            ; apagar o ultimo sensor lido deste comboio para nao iniciar o loop 
+
+comboio_frente_R1:
+MOV R0, R1
+MOV R7, VALOR_COMBOIO_A_ANDAR
+CALL calcula_e_escreve_valor_comboio
 JMP fim_sensor_2_ou_5_comboio
 
 inicio_espera_paragem:
@@ -526,7 +534,11 @@ fim_sensor_2_ou_5_comboio:
 POP R10
 POP R9
 POP R8
+POP R7
+POP R6
 POP R5
+POP R4
+POP R2
 POP R0
 RET
 
@@ -543,7 +555,7 @@ PUSH R8
 MOV R2, contador_interrupcao1_paragem ; se a flag da interrupcao 1 estiver off quer dizer que e a primeira vez que esta activa por isso muda apenas 1 semaforo
 MOV R3, valor_interrupcao1 ; se houve uma interrupcao activa este valor vai estar a on
 MOV R6, OFF
-MOV R7, ON
+MOV R7, VALOR_COMBOIO_PARADO
 MOV R8,[R2]
 MOV R9,[R3]
 
@@ -555,7 +567,6 @@ JNZ aumentar_contador_espera            ; se o contador ja tiver sido iniciado, 
 
 para_o_comboio_R1:
 MOV R0, R1
-MOV R7, VALOR_COMBOIOS_PARADO
 CALL calcula_e_escreve_valor_comboio
 
 aumentar_contador_espera:
