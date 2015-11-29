@@ -106,23 +106,23 @@ SP_inicial:                                 ; este e o endereco (1200H) com que 
 
 estados_agulhas:                            ; tabela para os estados das agulhas (DIREITA e ESQUERDA).
                                             ; 01 ESQUERDA, 10 DIREITA
-  STRING    DIREITA                       ; agulha 0
-  STRING    DIREITA                       ; agulha 1
-  STRING    DIREITA                       ; agulha 2
-  STRING    DIREITA                       ; agulha 3
+  STRING    DIREITA                         ; agulha 0
+  STRING    DIREITA                         ; agulha 1
+  STRING    DIREITA                         ; agulha 2
+  STRING    DIREITA                         ; agulha 3
 
 cores_semaforos:                            ; tabela para as cores dos semáforos (VERDE, CINZENTO ou VERMELHO).
                                             ; 00 cinzento, 01 vermelho, 10 verde, 11 amarelo.
-  STRING    VERDE                         ; cor do semáforo 0
-  STRING    VERDE                         ; cor do semáforo 1
-  STRING    VERDE                         ; cor do semáforo 2
-  STRING    VERDE                         ; cor do semáforo 3
-  STRING    VERDE                         ; cor do semáforo 4
-  STRING    VERDE                         ; cor do semáforo 5
-  STRING    VERDE                         ; cor do semáforo 6
-  STRING    VERDE                         ; cor do semáforo 7
-  STRING    VERDE                         ; cor do semáforo 8
-  STRING    VERDE                         ; cor do semáforo 9
+  STRING    VERDE                           ; cor do semáforo 0
+  STRING    VERDE                           ; cor do semáforo 1
+  STRING    VERDE                           ; cor do semáforo 2
+  STRING    VERDE                           ; cor do semáforo 3
+  STRING    VERDE                           ; cor do semáforo 4
+  STRING    VERDE                           ; cor do semáforo 5
+  STRING    VERDE                           ; cor do semáforo 6
+  STRING    VERDE                           ; cor do semáforo 7
+  STRING    VERDE                           ; cor do semáforo 8
+  STRING    VERDE                           ; cor do semáforo 9
 
 valores_anteriores:                         ; tabela com os valores anteriores para comparacao
     
@@ -145,19 +145,19 @@ tabela_interrupcoes:
   WORD interrupcao0
   WORD interrupcao1
 
-valores_semaforos: ; tabela usada para atribuir os valores aos semaforos
+valores_semaforos:                    ; tabela usada para atribuir os valores aos semaforos
   WORD NENHUM 
 
-ultimo_sensor_activo_comboio0: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 0 passou
+ultimo_sensor_activo_comboio0:        ; endereço onde guardamos o ultimo sensor pelo qual o comboio 0 passou
   WORD NENHUM 
 
-ultimo_sensor_activo_comboio1: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 1 passou
+ultimo_sensor_activo_comboio1:        ; endereço onde guardamos o ultimo sensor pelo qual o comboio 1 passou
   WORD NENHUM
 
-valor_interrupcao1: ; esta a off se a interrupcao estiver desligada, esta a on se a interrupcao estiver ligada
+valor_interrupcao1:                   ; esta a off se a interrupcao estiver desligada, esta a on se a interrupcao estiver ligada
   WORD OFF
 
-flag_interrupcao_1: ; esta a off se for a primeira vez que se inicia a interrupcao
+flag_interrupcao_1:                   ; esta a off se for a primeira vez que se inicia a interrupcao
   WORD OFF
 
 ;*******************************************************************************************************
@@ -251,7 +251,7 @@ MOV R2, BARRAS_VELOCIDADE
 CALL antes_de_comparar
 
 CMP R8,R9
-JNZ fim_verificar_mudanca_mover_comboios            ; caso nao haja mudanca saltamos para o teclado 
+JNZ fim_verificar_mudanca_mover_comboios    ; caso nao haja mudanca saltamos para o teclado 
 CALL mover_comboios                         ; caso haja mudanca chamamos a rotina que trata de mover os comboios
 
 fim_verificar_mudanca_mover_comboios: 
@@ -269,7 +269,7 @@ MOV R2, TECLADO07
 CALL antes_de_comparar
 
 CMP R8,R9
-JZ fim_verificar_mudanca_semaforos07            ; caso nao haja mudanca saltamos para o teclado 8 a F 
+JZ fim_verificar_mudanca_semaforos07        ; caso nao haja mudanca saltamos para o teclado 8 a F 
 CALL semaforos07                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 0 a 7
 
 fim_verificar_mudanca_semaforos07:
@@ -287,7 +287,7 @@ MOV R2, valores_semaforos
 CALL antes_de_comparar
 
 CMP R8,R9
-JZ fim_verificar_mudanca_semaforos8F                ; caso nao haja mudanca saltamos para os botoes de Pressao
+JZ fim_verificar_mudanca_semaforos8F        ; caso nao haja mudanca saltamos para os botoes de Pressao
 CALL semaforos8F                            ; caso haja mudanca chamamos a rotina que trata dos semaforos 8 e 9
 
 fim_verificar_mudanca_semaforos8F:
@@ -305,7 +305,7 @@ MOV R2, BOTOES_PRESSAO
 CALL antes_de_comparar
 
 CMP R8,R9
-JZ fim_verificar_mudanca_agulhas               ; caso nao haja mudanca saltamos para os Sensores
+JZ fim_verificar_mudanca_agulhas            ; caso nao haja mudanca saltamos para os Sensores
 CALL agulhas
 
 fim_verificar_mudanca_agulhas:
@@ -335,15 +335,15 @@ RET
 verificar_ultimo_sensor:
 
 sensor_8_comboio0:
-MOV R5, ultimo_sensor_activo_comboio0 ;valor do sensor pelo qual o comboio passou
+MOV R5, ultimo_sensor_activo_comboio0       ; valor do sensor pelo qual o comboio passou
 MOV R8, [R5]
 MOV R9, 08H
 
 CMP R8, R9
-JNZ fim_sensor_8_comboio0 ; se nao for o 8, nao fazemos nada nesta rotina
+JNZ fim_sensor_8_comboio0                   ; se nao for o 8, nao fazemos nada nesta rotina
 EI1
 EI
-CALL ligar_passagem_de_nivel  ; se for o 8 activamos a interrupcao e ligamos a passagem de nivel
+CALL ligar_passagem_de_nivel                ; se for o 8 activamos a interrupcao e ligamos a passagem de nivel
 
 fim_sensor_8_comboio0:
 RET
@@ -385,7 +385,7 @@ PUSH R6
 PUSH R7
 PUSH R8
 
-MOV R2, flag_interrupcao_1 ; se a flag da interrupcao 1 estiver off quer dizer que e a primeira vez que esta activa por isso muda apenas 1 semaforo
+MOV R2, flag_interrupcao_1                  ; se a flag da interrupcao 1 estiver off quer dizer que e a primeira vez que esta activa por isso muda apenas 1 semaforo
 MOV R3, valor_interrupcao1
 MOV R6, OFF
 MOV R7, ON
@@ -404,9 +404,9 @@ CALL alterar_o_semaforo_8
 segundo:
 CALL alterar_o_semaforo_9
 
-MOV [R2], R7                     ; flag interrupcao ON porque ja activou mais de uma vez
+MOV [R2], R7                                ; flag interrupcao ON porque ja activou mais de uma vez
 
-MOV [R3], R6                     ; valor da interrupcao foi usado por isso poe a OFF 
+MOV [R3], R6                                ; valor da interrupcao foi usado por isso poe a OFF 
 
 fim_ligar_passagem_de_nivel:
 POP R8
@@ -452,16 +452,16 @@ MOV R2,  SELECAO_COMBOIO
 MOV R3,  OPERACAO_COMBOIO
 MOV R8,  MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR
 MOV R9,  MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR
-MOV R10, SENTIDO_NEGATIVO_COMBOIO                   ; corresponde ao valor 80H
+MOV R10, SENTIDO_NEGATIVO_COMBOIO                     ; corresponde ao valor 80H
 MOVB R7,[R1]
 
 comboio_1:
-MOV R0, COMBOIO_1                                  ;comboio 1
+MOV R0, COMBOIO_1                                     ; comboio 1
 CALL calcula_e_escreve_valor_comboio
 
 comboio_0:
-MOV R0, COMBOIO_0                                   ;comboio 0
-SHR R7,4                                            ; shift para a direita para usarmos apenas os bits de maior peso do comboio 1 
+MOV R0, COMBOIO_0                                     ; comboio 0
+SHR R7,4                                              ; shift para a direita para usarmos apenas os bits de maior peso do comboio 1 
 CALL calcula_e_escreve_valor_comboio
 
 
@@ -495,17 +495,17 @@ PUSH R7
 PUSH R8
 PUSH R10
 
-AND R7, R8                                 ; aplicar a mascara para filtrar os bits desncessarios 
-BIT R7, 3                                  ; ler o bit 3 para ver a direcao dele
-JZ escreve_comboio                         ; se o bit for zero saltamos para nao por o seu sentido negativo
+AND R7, R8                                        ; aplicar a mascara para filtrar os bits desncessarios 
+BIT R7, 3                                         ; ler o bit 3 para ver a direcao dele
+JZ escreve_comboio                                ; se o bit for zero saltamos para nao por o seu sentido negativo
 
 por_sentido_negativo_do_comboio:                 
 ADD R7, R10 
 
 escreve_comboio: 
-AND R7,R9                                   ; limpar os bits nao necessarios
-MOVB [R2],R0                                ; escolher o comboio e operacao de mudar sentido
-MOVB [R3],R7                                ; escrever a mudanca de sentido e velocidade
+AND R7,R9                                         ; limpar os bits nao necessarios
+MOVB [R2],R0                                      ; escolher o comboio e operacao de mudar sentido
+MOVB [R3],R7                                      ; escrever a mudanca de sentido e velocidade
 
 POP R10
 POP R8
@@ -707,7 +707,7 @@ MOV R5, cores_semaforos                     ; colocar no argumento R5 da funcao 
 MOV R6, MASCARA_SEMAFORO_8_9
 MOV R9, CINZENTO
 MOV R10, VERMELHO
-MOV R0, [R2]                               ; mover os valores do teclado para R1
+MOV R0, [R2]                                ; mover os valores do teclado para R1
 AND R0, R6
 
 CMP R0, 0
