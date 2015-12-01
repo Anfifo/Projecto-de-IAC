@@ -67,14 +67,14 @@ ON EQU 1H
 
 MASCARA_VELOCIDADE_ANTES_DE_VERIFICAR  EQU 0BH
 MASCARA_VELOCIDADE_DEPOIS_DE_VERIFICAR EQU 83H                                                                        
-MASCARA_BOTOES_AGULHAS EQU 0FH              ; filtrar os bits que nao sejam os primeiros 4 das agulhas, pois so temos 4 agulhas para mudar 
-MASCARA_SEMAFORO_8_9 EQU 3H                 ; filtrar os bits que nao sejam os primeiros 2 pois so temos 2 semaforos, 8 e 9
+MASCARA_BOTOES_AGULHAS EQU 0FH                    ; filtrar os bits que nao sejam os primeiros 4 das agulhas, pois so temos 4 agulhas para mudar 
+MASCARA_SEMAFORO_8_9 EQU 3H                      ; filtrar os bits que nao sejam os primeiros 2 pois so temos 2 semaforos, 8 e 9
 
-VALOR_COMBOIO_A_ANDAR        EQU 03H       ; corresponde a 00000011b
-VALOR_COMBOIO_PARADO        EQU 00H
+VALOR_COMBOIO_A_ANDAR EQU 03H             ; corresponde a 00000011b
+VALOR_COMBOIO_PARADO EQU 00H
 
-VALOR_ALTERAR_SEMAFORO_8      EQU 1H
-VALOR_ALTERAR_SEMAFORO_9      EQU 2H
+VALOR_ALTERAR_SEMAFORO_8 EQU 1H
+VALOR_ALTERAR_SEMAFORO_9 EQU 2H
 
 NUMERO_SEMAFORO_8 EQU 8H
 NUMERO_SEMAFORO_9 EQU 9H
@@ -82,6 +82,21 @@ NUMERO_SEMAFORO_9 EQU 9H
 VALOR_3_SEGUNDOS EQU 6H                         ; 3 segundos correspondem a 6 vezes meio segundo
 
 NENHUM_SENSOR EQU 0FFFFH
+
+POSICAO_ACTUAL EQU 0H
+POSICAO_ANTERIOR EQU 0H
+
+VALOR_SENSOR_0 EQU 0H
+VALOR_SENSOR_1 EQU 1H
+VALOR_SENSOR_2 EQU 2H
+VALOR_SENSOR_3 EQU 3H
+VALOR_SENSOR_4 EQU 4H
+VALOR_SENSOR_5 EQU 5H
+VALOR_SENSOR_6 EQU 6H
+VALOR_SENSOR_7 EQU 7H
+VALOR_SENSOR_8 EQU 8H
+VALOR_SENSOR_9 EQU 9H 
+
 ;*****************************************************************************************************************
 ; Tabelas
 ;*****************************************************************************************************************
@@ -132,16 +147,11 @@ troco:
   STRING    DESOCUPADO
   STRING    DESOCUPADO
   STRING    DESOCUPADO
-  
+
+
 tabela_interrupcoes:
   WORD interrupcao0
   WORD interrupcao1
-
-valor_velocidade_comboio0:
-  WORD VALOR_COMBOIO_A_ANDAR
-
-valor_velocidade_comboio1:
-  WORD VALOR_COMBOIO_A_ANDAR
 
 valores_semaforos_0_7: ; tabela usada para alterar a cor dos semaforos
   WORD NENHUM
@@ -152,13 +162,7 @@ valores_semaforos_8_9: ; tabela usada para atribuir os valores aos semaforos
 ultimo_sensor_activo_comboio0: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 0 passou
   WORD NENHUM 
 
-ultimo_sensor_activo_comboio0_tras: ; endereco onde guardamos o ultimo sensor pela qual a traseira do comboio 0 passou
-  WORD NENHUM
-
 ultimo_sensor_activo_comboio1: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 1 passou
-  WORD NENHUM
-
-ultimo_sensor_activo_comboio_1_tras: ; endereço no qual guardamos o ultimo sensor pelo qual a traseira do comboio 1 passou
   WORD NENHUM
 
 valor_interrupcao1: ; esta a off se a interrupcao estiver desligada, esta a on se a interrupcao estiver ligada
@@ -167,14 +171,23 @@ valor_interrupcao1: ; esta a off se a interrupcao estiver desligada, esta a on s
 flag_interrupcao1_sensores: ; esta a off se for a primeira vez que se inicia a interrupcao
   WORD OFF
 
-contador_interrupcao1_paragem:
-  WORD 0H
+contador_interrupcao1_paragem: ; um contador que incrementa para contar o tempo que o comboio passa na estacao 
+  WORD NENHUM
+
+localizacao_comboio0:
+  WORD POSICAO_ACTUAL
+  WORD POSICAO_ANTERIOR                                    
+
+localizacao_comboio1:
+  WORD POSICAO_ACTUAL
+  WORD POSICAO_ANTERIOR
 
 ;*******************************************************************************************************
 ; Programa Principal
 ;*******************************************************************************************************
 ; Programa para verificar se houve mudanca aos comandos de leitura, se sim, entao inicializa-se a rotina 
 ;*******************************************************************************************************
+
 PLACE 0000H
 MOV SP, SP_inicial
 MOV BTE, tabela_interrupcoes
@@ -184,16 +197,14 @@ CALL inicializar_comboios
 CALL por_semaforos_a_cinzento
 
 start:
-
-MOV R4, 0H                                   ; contador para aceder a tabela 
-MOV R5, valores_anteriores_agulhas                   ; endereco com a tabela dos valores anteriores
-
-ciclo:
 CALL verificar_mudanca_agulhas
 CALL verificar_mudanca_sensores
 CALL verificar_ultimo_sensor
+CALL actualizar_posicao_comboios
 
 JMP start
+
+
 
 ;******************************************************************************************************
 ; Rotinas de inicialização
@@ -205,10 +216,16 @@ JMP start
 ;******************************************************************************************************
 
 inicializar_comboios:
-CALL comboio_0_frente
-CALL comboio_1_frente
-RET
+PUSH R0 
 
+MOV R0, COMBOIO_0             ;inicializa o comboio 0 com velocidade 3 sentido sentido positivo 
+CALL comboio_frente_R0
+
+MOV R0, COMBOIO_1
+CALL comboio_frente_R0        ; incializa o comboio 1 com velocidade 3 no sentido positivo 
+
+POP R0
+RET
 ;------------------------------------------------------------------------------------------------------
 
 por_semaforos_a_cinzento:
@@ -222,64 +239,37 @@ MOV R8, CINZENTO
 
 por_semaforo_8_a_cinzento:
 MOV R4, NUMERO_SEMAFORO_8
-MOV R5, cores_semaforos
-CALL calcula_endereco
-CALL escrever
-
+CALL alterar_valor_semaforos
 por_semaforo_9_a_cinzento:
 MOV R4, NUMERO_SEMAFORO_9
-MOV R5, cores_semaforos
-CALL calcula_endereco
-CALL escrever 
+CALL alterar_valor_semaforos
+
 
 POP R8
 POP R5
 POP R4
 POP R3
 RET
+;---------------------------------------------------------------------------------------
+alterar_valor_semaforos:
+PUSH R5
 
-;-----------------------------------------------------------------------------------------------------
-comboio_0_frente:
-PUSH R0
-PUSH R7
+MOV R5, cores_semaforos
+CALL calcula_endereco
+CALL escrever 
 
-MOV R0, COMBOIO_0
-MOV R7, VALOR_COMBOIO_A_ANDAR
-CALL calcula_e_escreve_valor_comboio
-
-POP R7
-POP R0
+POP R5 
 RET 
-
-comboio_1_frente:
-PUSH R0
-PUSH R7
-
-MOV R0, COMBOIO_1
-MOV R7, VALOR_COMBOIO_A_ANDAR
-CALL calcula_e_escreve_valor_comboio
-
-POP R7
-POP R0
-RET
-
-
 ;******************************************************************************************************
-; Rotinas de verificacao 
+; Rotinas de verificacao ( verifica se existiu mudanca dos inputs, caso nao haja nao entra nas rotinas)
 ;******************************************************************************************************
-; Processo que verifica se existiu mudanca dos inputs, caso nao haja nao executa os ciclos.
-;
-; Argumentos: contador (R4) valores_anteriores(R5)        | Retorna: nada
-;
+; Argumentos: Nenhum                | Retorna: Nada 
 ;******************************************************************************************************
-
-;--------------------------------------------------------------------------------------------------------
 verificar_mudanca_agulhas:                  ; verificar se houve mudanca nos valores dos botoes de Pressao
 PUSH R2
 PUSH R5
 PUSH R8
 PUSH R9
-
 
 MOV R2, BOTOES_PRESSAO
 MOV R5, valores_anteriores_agulhas
@@ -288,7 +278,7 @@ MOV R9, [R5]
 
 CMP R8,R9
 JZ fim_verificar_mudanca_agulhas               ; caso nao haja mudanca saltamos para os Sensores
-MOV [R5], R8                                   ; escreve na tabela o valor anterior
+MOV [R5], R8                                   ; actualiza o valor anterior 
 CALL agulhas
 
 fim_verificar_mudanca_agulhas:
@@ -314,61 +304,91 @@ fim_verificar_mudanca_sensores:
 POP R9
 POP R8
 RET
-;---------------------------------------------------------------------------------------------------------
+
+;****************************************************************************************************************************************
+; Rotina responsavel por controlar a actividade dos sensores e as suas consequencias 
+;****************************************************************************************************************************************
+; Argumentos : Nenhum            | Retorna: Nada 
+;****************************************************************************************************************************************
 
 verificar_ultimo_sensor:
-PUSH R1
+PUSH R0
 PUSH R5
 
-verificar_sensor_8_comboio0:
-MOV R5, ultimo_sensor_activo_comboio0       ;valor do sensor pelo qual o comboio passou
-CALL sensor_8_comboio
-
-verificar_sensor_8_comboio1:
-MOV R5, ultimo_sensor_activo_comboio1 
-CALL sensor_8_comboio
-
-verificar_sensor_9_comboio_0:
-MOV R5, ultimo_sensor_activo_comboio0
-CALL sensor_9_comboio
-
-verificar_sensor_9_comboio1:
-MOV R5, ultimo_sensor_activo_comboio1
-CALL sensor_9_comboio
-
-verficar_sensor_2_ou_5_comboio0:
+verificar_sensores_comboio0:
 MOV R0, COMBOIO_0
-MOV R5, ultimo_sensor_activo_comboio0
+MOV R5, ultimo_sensor_activo_comboio0       ;valor do sensor pelo qual o comboio passou
+
+CALL sensor_8_comboio
+CALL sensor_9_comboio
 CALL sensor_2_ou_5_comboio
 
-verficar_sensor_2_ou_5_comboio1:
+
+verificar_sensor_8_comboio1:
 MOV R0, COMBOIO_1
-MOV R5, ultimo_sensor_activo_comboio1
+MOV R5, ultimo_sensor_activo_comboio1 
+
+CALL sensor_8_comboio
+CALL sensor_9_comboio
 CALL sensor_2_ou_5_comboio
 
 fim_verificar_ultimo_sensor:
 POP R5
-POP R1
+POP R0
 RET
 
-;***************************************************************************************************************************************
-; Rotina Auxiliar a Rotina de verificacao 
-;***************************************************************************************************************************************
-; Processo responsavel por mover para o Registo R8 e R9 os valores do endereco e o valor anterior da tabela respectiva depois de comparar
-;
-; antes_de_comparar: 
-; Argumentos: R4 (contador), R2 (endereco do valor atual ), R5 (com o endereco do valor anterior)
-; Retorna: R8 (R8 <- [R2]) , R9 (R9 <- [R5]), R4 (R4 <- R4+1)
-;
-;***************************************************************************************************************************************
+;****************************************************************************************************************************************
+; Rotina de Actualizar posicoes dos comboios (responsavel por encontrar a posição actual e anterior dos comboios)
+;****************************************************************************************************************************************
+; Argumentos: Nenhum      | Retorna: Nada  
+;****************************************************************************************************************************************
+actualizar_posicao_comboios:
+PUSH R3
+PUSH R5
 
+actualizar_posicao_comboio0:
+MOV R2, localizacao_comboio0
+MOV R3,R2                                     ;aceder ao 2º endereço da tabela que contem o valor anteior da localizacao do comboio 0
+ADD R3, 2
+MOV R5, ultimo_sensor_activo_comboio0
+CALL actualiza_posicao 
+
+actualizar_posicao_comboio1:
+MOV R2, localizacao_comboio1
+MOV R3,R2
+ADD R3, 2                                     ;aceder ao 2º endereço da tabela que contem o valor anterior 
+MOV R5, ultimo_sensor_activo_comboio1
+CALL actualiza_posicao 
+
+fim_actualizar_posicao_comboios:
+POP R5
+POP R3
+RET
+
+
+
+
+
+;****************************************************************************************************************************************
+;================================ Rotinas Auxiliar a Rotina de verificacao dos Sensores ================================================;
+;****************************************************************************************************************************************
+
+
+
+
+;****************************************************************************************************************************************
+; Rotina do Sensor 8 passado pelo comboio (verifica se o ultimo sensor pelo qual o comboio foi o 8, se for entao liga passagem de nivel)
+;****************************************************************************************************************************************
+; Argumentos: R5 ( endereço com o numero do ultimo sensor pelo qual o comboio passou), R0 (numero do comboio)
+; Retorna: Nada 
+;****************************************************************************************************************************************
 
 sensor_8_comboio: ; se o comboio passou pelo sensor 8, entao vamos ligar a passagem de nivel, caso contrario nao fazemos nada
 PUSH R5
 PUSH R8
 PUSH R9
 MOV R8, [R5]
-MOV R9, 08H
+MOV R9, VALOR_SENSOR_8
 
 CMP R8, R9
 JNZ fim_sensor_8_comboio ; se nao for o 8, nao fazemos nada nesta rotina
@@ -383,8 +403,11 @@ POP R5
 RET
 
 
-;----------------------------------------------------------------------------------------------------------------------------------------
-
+;****************************************************************************************************************************************
+; Rotina Liga Passagem de Nivel (responsavel por alternar entre vermelho e cinzento a passagem de nivel)
+;****************************************************************************************************************************************
+; Argumentos: nenhum                  | retorna: Nada 
+;****************************************************************************************************************************************
 ligar_passagem_de_nivel: ; activamos a passagem de nivel, a primeira vez da passagem de nivel so activa um semaforo para a mudanca ser alternada entre os semaforos
 PUSH R2
 PUSH R3
@@ -404,13 +427,15 @@ CMP R9, OFF
 JZ fim_ligar_passagem_de_nivel
 
 CMP R8, OFF
-JZ segundo
+JZ alterar_o_semaforo_9
 
-primeiro:
-CALL alterar_o_semaforo_8
+alterar_o_valor_semaforo8:
+MOV R0, VALOR_ALTERAR_SEMAFORO_8 
+CALL alterar_o_semaforo_8_9           ;rotina que vai alterar o valor dos semaforos em funcao do valor de R0 
 
-segundo:
-CALL alterar_o_semaforo_9
+alterar_o_semaforo_9:
+MOV R0, VALOR_ALTERAR_SEMAFORO_9
+CALL alterar_o_semaforo_8_9
 
 MOV [R2], R7                     ; flag interrupcao ON porque ja activou mais de uma vez
 MOV [R3], R6                     ; valor da interrupcao foi usado por isso poe a OFF 
@@ -423,36 +448,29 @@ POP R5
 POP R3
 POP R2
 RET 
-;---------------------------------------------------------------------------------------------------------------------------------------
-alterar_o_semaforo_8:
+;****************************************************************************************************************************************
+; Rotina de alteracao dos semaforos 
+;****************************************************************************************************************************************
+; Argumentos: R0 (valor que altera o semaforo)
+;****************************************************************************************************************************************
+alterar_o_semaforo_8_9:
+PUSH R0
 PUSH R3
-PUSH R7
 
 MOV R3, valores_semaforos_8_9
-MOV R7, VALOR_ALTERAR_SEMAFORO_8
-MOV [R3], R7 
+MOV [R3], R0
 CALL semaforos8F
 
-POP R7
 POP R3
-RET
-;----------------------------------------------------------------------------------------------------------------------------------------
-
-alterar_o_semaforo_9:
-PUSH R3
-PUSH R7
-
-MOV R3, valores_semaforos_8_9
-MOV R7, VALOR_ALTERAR_SEMAFORO_9
-MOV [R3], R7
-CALL semaforos8F
-POP R7
-POP R3
+POP R0
 RET
 
 
-
-;----------------------------------------------------------------------------------------------------------------------------------------
+;****************************************************************************************************************************************
+; Rotina do sensor 9 (verifica se o comboio passou pelo sensor 9 e se sim, desliga a passagem de nivel e poe os semaforos 8-9 a cinzento)
+;****************************************************************************************************************************************
+; Argumentos: R5 (ultimo sensor pelo qual o comoboio passou)
+;****************************************************************************************************************************************
 
 sensor_9_comboio:
 PUSH R2
@@ -465,7 +483,7 @@ PUSH R10
 MOV R2, flag_interrupcao1_sensores ; voltar a por a flag a off, para quando um comboio passar pela primeira vez 
 MOV R3, OFF
 MOV R8, [R5]
-MOV R9, 09H
+MOV R9, VALOR_SENSOR_9
 MOV R10, [R2]
 
 CMP R8, R9
@@ -486,14 +504,17 @@ POP R3
 POP R2
 RET
 
-;---------------------------------------------------------------------------------------------------------------------------------------
+;***************************************************************************************************************************************
+; rotinas auxiliares a verificacao dos sensores 
+;***************************************************************************************************************************************
+; Argumentos: R5 (endereço que contem o valor do ultimo sensor pelo qual o comboio passou), R0 (numero do comboio)
+; Retorna: Nada 
+;***************************************************************************************************************************************
 sensor_2_ou_5_comboio:
-PUSH R0
 PUSH R2
 PUSH R4
 PUSH R5
 PUSH R6 
-PUSH R7
 PUSH R8
 PUSH R9
 PUSH R10
@@ -502,8 +523,8 @@ MOV R2, valor_interrupcao1     ; um contador que conta o numero de vezes que a i
 MOV R4, [R2]
 MOV R6, ON
 MOV R8, [R5]                              ; numero do ultimo sensor activo (vem como argumento)
-MOV R9, 02H                               ; ver se o sensor 2 esta ligado
-MOV R10, 05H                              ; ver se o sensor 5 esta ligado 
+MOV R9, VALOR_SENSOR_2                               ; ver se o sensor 2 esta ligado
+MOV R10, VALOR_SENSOR_5                              ; ver se o sensor 5 esta ligado 
 
 CMP R8, R9 
 JZ pre_espera_paragem 
@@ -524,15 +545,17 @@ fim_sensor_2_ou_5_comboio:
 POP R10
 POP R9
 POP R8
-POP R7
 POP R6
 POP R5
 POP R4
 POP R2
-POP R0
 RET
 
-;---------------------------------------------------------------------------------------------------------------------------------------
+;****************************************************************************************************************************************
+; Rotina temporizador ( incrementa um contador numa word em funcao da interrupcao 1)
+;****************************************************************************************************************************************
+; Argumentos: Nenhum                         | Retorna: Nada 
+;****************************************************************************************************************************************
 temporizador: ;incrementar o contador_interrupcao1_paragem e poe a OFF a word da interrupcao 
 PUSH R2 
 PUSH R3
@@ -554,26 +577,29 @@ POP R3
 POP R2
 RET
 
-;---------------------------------------------------------------------------------------------------------------------------------------
+
+;****************************************************************************************************************************************
+; Rotina que espera na paragem ( responsavel pelo comboio estar para ou arrancar da paragem 5 ou 2)
+;****************************************************************************************************************************************
+; Argumentos R0 (Numero do Comboio) R5( numero do ultimo sensor activo )
+;****************************************************************************************************************************************
+
 espera_paragem: ;recebe o R1 que determina se é o comboio 1 ou 0 
 PUSH R1
 PUSH R2
 PUSH R3
 PUSH R5
-PUSH R6
-PUSH R7
-PUSH R8
 
-MOV R1, NENHUM_SENSOR
+MOV R1, NENHUM_SENSOR                 ; valor que apaga o ultimos sensor 
 MOV R2, contador_interrupcao1_paragem ; se a flag da interrupcao 1 estiver off quer dizer que e a primeira vez que esta activa por isso muda apenas 1 semaforo
 MOV R3, 0H
 MOV R4,[R2]
 
 CMP R4,1
 JNZ verificar_contador
-para_comboio_R0:
-MOV R7, VALOR_COMBOIO_PARADO
-CALL calcula_e_escreve_valor_comboio
+
+para_o_comboio_na_paragem:
+CALL para_comboio_R0
 JMP fim_espera_paragem
 
 verificar_contador:
@@ -583,15 +609,10 @@ JNZ fim_espera_paragem
 MOV [R2], R3                            ; por o contador de novo a zero
 MOV [R5], R1                            ; apagar o ultimo sensor lido deste comboio para nao voltar a iniciar o loop 
 
-comboio_frente_R0:
-MOV R7, VALOR_COMBOIO_A_ANDAR
-CALL calcula_e_escreve_valor_comboio
-
+retornar_marcha_comboio:
+CALL comboio_frente_R0
 
 fim_espera_paragem:
-POP R8
-POP R7
-POP R6
 POP R5
 POP R3
 POP R2
@@ -599,10 +620,65 @@ POP R1
 RET
 
 
-;------------------------------------------------------------------------------------------------------------------------------------
+
+;*****************************************************************************************************************************
+; Rotina Auxiliar a posicao
+;
+;
+;*****************************************************************************************************************************
+
+actualiza_posicao:   ;R2 valor actual, R3 valor anterior da posicao 
+
+PUSH R2
+PUSH R5 
+PUSH R8
+PUSH R9
+
+MOV R8, [R2]
+MOV R9,[R5] 
+
+CMP R9, 7
+JGT fim_actualiza_posicao
+
+CMP R8, R9
+JZ fim_actualiza_posicao
+
+MOV [R3], R8                              ; actualiza o valor anterior para o valor que ate agora era o presente 
+MOV [R2], R9                              ; actualiza o valor actual para o novo valor actual 
+
+fim_actualiza_posicao:
+POP R9
+POP R8
+POP R5
+POP R2 
+RET  
 
 
 
+
+;*****************************************************************************************************************************
+; Rotina de controle do comboio 
+;*****************************************************************************************************************************
+; Argumentos: R0 (numero do comboio a ser controlado)      |  Retorna: Nada 
+;*****************************************************************************************************************************
+para_comboio_R0:
+PUSH R7
+
+MOV R7, VALOR_COMBOIO_PARADO
+CALL calcula_e_escreve_valor_comboio
+
+POP R7 
+RET 
+;------------------------------------------------------------------------------------------------------------------------------
+; Recebe o R0 como argumento que é o numero do comboio 
+comboio_frente_R0:
+PUSH R7
+
+MOV R7, VALOR_COMBOIO_A_ANDAR
+CALL calcula_e_escreve_valor_comboio
+
+POP R7
+RET 
 
 ;******************************************************************************************************************************
 ; Rotina Auxiliar a mover comboios
@@ -613,6 +689,7 @@ RET
 ; Retorna: nada
 ;
 ;******************************************************************************************************************************
+
 
 calcula_e_escreve_valor_comboio:
 PUSH R0
@@ -1036,20 +1113,6 @@ CALL escreve_sensor
 JMP fim_sensores
 
 
-escreve_sensores_tras:
-BIT R8, 1                                   ; bit que diz qual o comboio 
-JNZ escreve_sensor_comboio_1_tras
-
-
-escreve_sensor_comboio_0_tras:
-MOV R5, ultimo_sensor_activo_comboio0_tras
-MOV [R5], R7
-JMP fim_sensores
-
-escreve_sensor_comboio_1_tras:
-MOV R5, ultimo_sensor_activo_comboio_1_tras
-MOV [R5], R7
-
 fim_sensores:
 POP R10
 POP R9
@@ -1065,7 +1128,7 @@ POP R0
 RET
 
 ;********************************************************************************************************************************
-; Rotinas Auxiliares aos sensores                                                                                                                       ;
+; Rotinas Auxiliares aos sensores                                                                                           
 ;********************************************************************************************************************************
 
 escreve_sensor:
