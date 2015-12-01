@@ -168,7 +168,7 @@ flag_interrupcao1_sensores: ; esta a off se for a primeira vez que se inicia a i
   WORD OFF
 
 contador_interrupcao1_paragem:
-  WORD OFF
+  WORD 0H
 
 ;*******************************************************************************************************
 ; Programa Principal
@@ -337,12 +337,12 @@ MOV R5, ultimo_sensor_activo_comboio1
 CALL sensor_9_comboio
 
 verficar_sensor_2_ou_5_comboio0:
-MOV R1, COMBOIO_0
+MOV R0, COMBOIO_0
 MOV R5, ultimo_sensor_activo_comboio0
 CALL sensor_2_ou_5_comboio
 
 verficar_sensor_2_ou_5_comboio1:
-MOV R1, COMBOIO_1
+MOV R0, COMBOIO_1
 MOV R5, ultimo_sensor_activo_comboio1
 CALL sensor_2_ou_5_comboio
 
@@ -498,11 +498,9 @@ PUSH R8
 PUSH R9
 PUSH R10
 
-MOV R0, NENHUM_SENSOR                     ; para apagar o ultimo sensor lido
-MOV R2, contador_interrupcao1_paragem     ; um contador que conta o numero de vezes que a interrupcao aconteceu
+MOV R2, valor_interrupcao1     ; um contador que conta o numero de vezes que a interrupcao aconteceu
 MOV R4, [R2]
-MOV R6, VALOR_3_SEGUNDOS                  ; corresponde a 6, pois 6*1/2 segundo = 3
-MOV R7, 0H
+MOV R6, ON
 MOV R8, [R5]                              ; numero do ultimo sensor activo (vem como argumento)
 MOV R9, 02H                               ; ver se o sensor 2 esta ligado
 MOV R10, 05H                              ; ver se o sensor 5 esta ligado 
@@ -511,23 +509,15 @@ CMP R8, R9
 JZ pre_espera_paragem 
 
 CMP R8, R10
-JNZ fim_sensor_2_ou_5_comboio 
+JNZ fim_sensor_2_ou_5_comboio
 
 pre_espera_paragem:
-CMP R4, R6
-JNZ inicio_espera_paragem
-MOV [R2], R7                            ; por o contador de novo a zero
-MOV [R5], R0                            ; apagar o ultimo sensor lido deste comboio para nao voltar a iniciar o loop 
-
-comboio_frente_R1:
-MOV R0, R1
-MOV R7, VALOR_COMBOIO_A_ANDAR
-CALL calcula_e_escreve_valor_comboio
-JMP fim_sensor_2_ou_5_comboio
-
-inicio_espera_paragem:
 EI1
 EI
+CMP R4, R6
+JNZ fim_sensor_2_ou_5_comboio
+
+CALL temporizador
 CALL espera_paragem  ; se for 2 ou 5 iniciamos uma paragem
 
 fim_sensor_2_ou_5_comboio:
@@ -543,6 +533,28 @@ POP R0
 RET
 
 ;---------------------------------------------------------------------------------------------------------------------------------------
+temporizador: ;incrementar o contador_interrupcao1_paragem e poe a OFF a word da interrupcao 
+PUSH R2 
+PUSH R3
+PUSH R4
+PUSH R7
+
+MOV R2, contador_interrupcao1_paragem
+MOV R3, valor_interrupcao1
+MOV R4, [R2]
+MOV R7, OFF
+
+ADD R4, 1
+MOV [R2], R4
+MOV [R3], R7
+
+POP R7
+POP R4
+POP R3
+POP R2
+RET
+
+;---------------------------------------------------------------------------------------------------------------------------------------
 espera_paragem: ;recebe o R1 que determina se é o comboio 1 ou 0 
 PUSH R1
 PUSH R2
@@ -552,27 +564,29 @@ PUSH R6
 PUSH R7
 PUSH R8
 
+MOV R1, NENHUM_SENSOR
 MOV R2, contador_interrupcao1_paragem ; se a flag da interrupcao 1 estiver off quer dizer que e a primeira vez que esta activa por isso muda apenas 1 semaforo
-MOV R3, valor_interrupcao1 ; se houve uma interrupcao activa este valor vai estar a on
-MOV R6, OFF
-MOV R8,[R2]
-MOV R9,[R3]
+MOV R3, 0H
+MOV R4,[R2]
 
-CMP R9, OFF                         ;a interrupcao estava a OFF por isso nao fazemos nada.
-JZ fim_espera_paragem
-
-CMP R8, 0H
-JNZ aumentar_contador_espera            ; se o contador ja tiver sido iniciado, entao ja esta parado, vamos so aumentar o contador
-
-para_o_comboio_R1:
-MOV R0, R1
+CMP R4,1
+JNZ verificar_contador
+para_comboio_R0:
 MOV R7, VALOR_COMBOIO_PARADO
 CALL calcula_e_escreve_valor_comboio
+JMP fim_espera_paragem
 
-aumentar_contador_espera:
-ADD R8, 1
-MOV [R2], R8
-MOV [R3], R6                     ; valor da interrupcao foi usado por isso poe a OFF 
+verificar_contador:
+CMP R4, 6
+JNZ fim_espera_paragem
+
+MOV [R2], R3                            ; por o contador de novo a zero
+MOV [R5], R1                            ; apagar o ultimo sensor lido deste comboio para nao voltar a iniciar o loop 
+
+comboio_frente_R0:
+MOV R7, VALOR_COMBOIO_A_ANDAR
+CALL calcula_e_escreve_valor_comboio
+
 
 fim_espera_paragem:
 POP R8
@@ -585,8 +599,7 @@ POP R1
 RET
 
 
-;---------------------------------------------------------------------------------------------------------------------------------------
-
+;------------------------------------------------------------------------------------------------------------------------------------
 
 
 
