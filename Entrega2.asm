@@ -159,14 +159,8 @@ tabela_interrupcoes:
 valores_semaforos_0_7: ; tabela usada para alterar a cor dos semaforos
   WORD NENHUM
 
-valores_semaforos_8_9: ; tabela usada para atribuir os valores aos semaforos
+valores_semaforos_8_9:
   WORD NENHUM 
-
-ultimo_sensor_activo_comboio0_paragem: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 0 passou endereço 
-  WORD NENHUM 
-
-ultimo_sensor_activo_comboio1_paragem: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 1 passou que ficou registado para a paragem 
-  WORD NENHUM
 
 ultimo_sensor_comobio0_interrupcao: 
   WORD NENHUM 
@@ -215,7 +209,6 @@ start:
 
 ciclo:
   CALL verificar_mudanca_agulhas
-  CALL verificar_mudanca_sensores
   CALL verificar_ultimo_sensor
   CALL verificar_alteracoes_posicao_e_estados
 JMP ciclo
@@ -442,105 +435,6 @@ RET
 
 
 
-;**************************************************************************************************************************************
-;======================================================= verificar_mudanca_sensores ====================================================
-;**************************************************************************************************************************************
-
-verificar_mudanca_sensores:                 ; iniciar a leitura dos sensores caso haja pelo menos 1 evento
-PUSH R8
-PUSH R9
-  MOV R2, NUMERO_EVENTOS_SENSORES
-  MOVB R8, [R2]
-
-  CMP R8, 0H
-  JZ fim_verificar_mudanca_sensores
-  CALL sensores 
-fim_verificar_mudanca_sensores:
-POP R9
-POP R8
-RET
-
-;**********************************************************************************************************************************
-; Sensores
-;**********************************************************************************************************************************
-; Processo responsavel pela leitura dos Sensores que transmite ao LCD o sensor por qual cada comboio passou. 
-; 
-; Argumentos: Nenhum
-; Return: Nada
-;***********************************************************************************************************************************
-sensores:
-PUSH R0
-PUSH R1
-PUSH R2
-PUSH R3
-PUSH R4
-PUSH R5
-PUSH R6
-PUSH R7
-PUSH R8
-PUSH R9
-PUSH R10
-  MOV R0, TRANSFORMADOR_ASCII
-  MOV R1, INFORMACAO_SENSORES
-  MOVB R8, [R1]                               ; 1º byte (informacão sobre o comboio que passou)
-  MOVB R9, [R1]                               ; 2º byte (valor do sensor pelo qual passou)
-  MOV R7, R9                                  ; numero do sensor passado nao transformado em ascii
-  transformar_para_ascii:
-    MOV R0, TRANSFORMADOR_ASCII                 ; somar 30H para transformar em codigo ASCII os numeros 0-9
-    ADD R9,R0
-
-  BIT R8, 0                                   ; nao contamos o bit a 1 que e a parte de tras da carruagem 
-    JNZ fim_sensores
-  BIT R8, 1                                   ; bit que diz qual o comboio 
-    JNZ escreve_sensor_comboio_1
-  escreve_sensor_comboio_0:
-    MOV R3, LCD_SUPERIOR
-    MOV R5, ultimo_sensor_activo_comboio0_paragem
-    CALL escreve_sensor
-    JMP fim_sensores
-  escreve_sensor_comboio_1:
-    MOV R3, LCD_INFERIOR
-    MOV R5, ultimo_sensor_activo_comboio1_paragem
-    CALL escreve_sensor
-    JMP fim_sensores
-fim_sensores:
-POP R10
-POP R9
-POP R8
-POP R7
-POP R6
-POP R5
-POP R4
-POP R3
-POP R2
-POP R1
-POP R0
-RET
-
-;------------------------
-
-escreve_sensor:
-PUSH R7
-PUSH R9
-  MOVB [R3], R9
-  MOV [R5], R7
-POP R9
-POP R7
-RET
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ;**************************************************************************************************************************************
@@ -559,22 +453,31 @@ RET
 
 verificar_ultimo_sensor:
 PUSH R0
+PUSH R1
+PUSH R2 
 PUSH R5
+PUSH R8
+PUSH R9 
   verificar_sensores_comboio0:
     MOV R0, COMBOIO_0
-    MOV R5, ultimo_sensor_activo_comboio0_paragem       ;valor do sensor pelo qual o comboio passou
+    MOV R5, ultimo_sensor_comobio0_interrupcao       ;valor do sensor pelo qual o comboio passou
     CALL sensor_8_comboio
     CALL sensor_9_comboio
     CALL sensor_2_ou_5_comboio
 
   verificar_sensor_8_comboio1:
     MOV R0, COMBOIO_1
-    MOV R5, ultimo_sensor_activo_comboio1_paragem 
+    MOV R5, ultimo_sensor_comboio1_interrupcao
     CALL sensor_8_comboio
-    CALL sensor_9_comboio
+    CALL sensor_9_comboio 
     CALL sensor_2_ou_5_comboio
+
 fim_verificar_ultimo_sensor:
+POP R9
+POP R8
 POP R5
+POP R2 
+POP R1 
 POP R0
 RET
 
@@ -833,12 +736,8 @@ RET
 verificar_alteracoes_posicao_e_estados:
 PUSH R8
 PUSH R9 
-  MOV R8, NUMERO_EVENTOS_SENSORES
-  MOV R9, 0H
-  CMP R8, R9 
-    JZ fim_verificacao_alteracoes
   CALL actualizar_posicao_comboios
-  CALL actualizar_estado_trocos
+  ;CALL actualizar_estado_trocos
 fim_verificacao_alteracoes:
 POP R9
 POP R8
@@ -900,6 +799,9 @@ PUSH R10
   MOV [R3], R7                              ; actualiza o valor anterior para o valor que ate agora era o presente 
   MOV [R2], R8 
   MOV [R1], R9                              ; actualiza o valor actual para o novo valor actual 
+
+CALL actualizar_estado_trocos
+
 fim_actualiza_posicao:
 POP R10 
 POP R9
@@ -927,7 +829,8 @@ PUSH R3
 PUSH R5
 PUSH R6
 PUSH R7
-  MOV R5, localizacao_comboio0
+  MOV R5, localizacao_comboio1
+  
   MOV R6, tabela_estados_troco
   MOV R1, [R5]                      ; valor da localizacao actual do comboio 
   ADD R5, 2                         ; endereco do valor anterior 
@@ -971,6 +874,7 @@ PUSH R8
   
   MOV [R6], R7              ; Ocupa ou Desocupa o Troco 
   CALL alterar_semaforo_correspondente
+  
   MOV R4, R0
   CALL debugging_lights 
 fim_alterar_troco:
