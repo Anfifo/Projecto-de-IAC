@@ -58,8 +58,10 @@ VERMELHO EQU 1H                             ; Valor da cor Vermelha no semaforo
 VERDE    EQU 2H                             ; Valor da cor Verde no semaforo30H                 
 
 TRANSFORMADOR_ASCII EQU 30H                 ; Valor necessario para no sensor transformar a informacao correcta ASCII dos numeros
-DESOCUPADO EQU 0							              ; quando o troco se encontra desocupado
-OCUPADO EQU 1								                ; quando o troco se encontra ocupado
+
+DESOCUPADO EQU 0H							              ; quando o troco se encontra desocupado
+OCUPADO EQU 1H								                ; quando o troco se encontra ocupado
+RESERVADO EQU 2H
 
 NENHUM EQU 0H
 OFF EQU 0H
@@ -83,8 +85,9 @@ VALOR_3_SEGUNDOS EQU 6H                         ; 3 segundos correspondem a 6 ve
 
 NENHUM_SENSOR EQU 0FFFFH
 
-POSICAO_ACTUAL EQU 0H
-POSICAO_ANTERIOR EQU 0H
+POSICAO_SEGUINTE EQU 0FFFFH
+POSICAO_ACTUAL EQU 0FFFFH
+POSICAO_ANTERIOR EQU 0FFFFH
 
 VALOR_SENSOR_0 EQU 0H
 VALOR_SENSOR_1 EQU 1H
@@ -159,10 +162,16 @@ valores_semaforos_0_7: ; tabela usada para alterar a cor dos semaforos
 valores_semaforos_8_9: ; tabela usada para atribuir os valores aos semaforos
   WORD NENHUM 
 
-ultimo_sensor_activo_comboio0: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 0 passou
+ultimo_sensor_activo_comboio0_paragem: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 0 passou endereço 
   WORD NENHUM 
 
-ultimo_sensor_activo_comboio1: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 1 passou
+ultimo_sensor_activo_comboio1_paragem: ; endereço onde guardamos o ultimo sensor pelo qual o comboio 1 passou que ficou registado para a paragem 
+  WORD NENHUM
+
+ultimo_sensor_comobio0_interrupcao: 
+  WORD NENHUM 
+
+ultimo_sensor_comboio1_interrupcao:
   WORD NENHUM
 
 valor_interrupcao1: ; esta a off se a interrupcao estiver desligada, esta a on se a interrupcao estiver ligada
@@ -175,10 +184,12 @@ contador_interrupcao1_paragem: ; um contador que incrementa para contar o tempo 
   WORD NENHUM
 
 localizacao_comboio0:
-  WORD POSICAO_ACTUAL
+  WORD POSICAO_SEGUINTE
+  WORD POSICAO_ACTUAL 
   WORD POSICAO_ANTERIOR                                    
 
 localizacao_comboio1:
+  WORD POSICAO_SEGUINTE 
   WORD POSICAO_ACTUAL
   WORD POSICAO_ANTERIOR
 
@@ -195,6 +206,10 @@ MOV SP, SP_inicial
 MOV BTE, tabela_interrupcoes
 
 start:
+  MOV  R0, 2                ; interrupção 0 activa enquanto houver eventos por ler ao nível 1
+  MOV RCN, R0               ;(para não se perderem eventos caso surjam em sequência rápida e o programa não tenha tempo para os tratar logo que ocorram).   
+     EI0                           ; faz enable da interrupcao zero
+     EI                            
   CALL inicializar_comboios
   CALL por_semaforos_a_cinzento
 
@@ -335,7 +350,6 @@ POP R2
 POP R1
 POP R0
 RET
-
 
 ;=========================================================================================================
 
@@ -481,12 +495,12 @@ PUSH R10
     JNZ escreve_sensor_comboio_1
   escreve_sensor_comboio_0:
     MOV R3, LCD_SUPERIOR
-    MOV R5, ultimo_sensor_activo_comboio0
+    MOV R5, ultimo_sensor_activo_comboio0_paragem
     CALL escreve_sensor
     JMP fim_sensores
   escreve_sensor_comboio_1:
     MOV R3, LCD_INFERIOR
-    MOV R5, ultimo_sensor_activo_comboio1
+    MOV R5, ultimo_sensor_activo_comboio1_paragem
     CALL escreve_sensor
     JMP fim_sensores
 fim_sensores:
@@ -548,14 +562,14 @@ PUSH R0
 PUSH R5
   verificar_sensores_comboio0:
     MOV R0, COMBOIO_0
-    MOV R5, ultimo_sensor_activo_comboio0       ;valor do sensor pelo qual o comboio passou
+    MOV R5, ultimo_sensor_activo_comboio0_paragem       ;valor do sensor pelo qual o comboio passou
     CALL sensor_8_comboio
     CALL sensor_9_comboio
     CALL sensor_2_ou_5_comboio
 
   verificar_sensor_8_comboio1:
     MOV R0, COMBOIO_1
-    MOV R5, ultimo_sensor_activo_comboio1 
+    MOV R5, ultimo_sensor_activo_comboio1_paragem 
     CALL sensor_8_comboio
     CALL sensor_9_comboio
     CALL sensor_2_ou_5_comboio
@@ -836,34 +850,44 @@ RET
 ; Argumentos: Nenhum      | Retorna: Nada  
 ;****************************************************************************************************************************************
 actualizar_posicao_comboios:
+PUSH R1
+PUSH R2 
 PUSH R3
 PUSH R5
   actualizar_posicao_comboio0:
-    MOV R2, localizacao_comboio0
-    MOV R3,R2                                     ;aceder ao 2º endereço da tabela que contem o valor anteior da localizacao do comboio 0
-    ADD R3, 2
-    MOV R5, ultimo_sensor_activo_comboio0
+    MOV R1, localizacao_comboio0
+    MOV R5, ultimo_sensor_comobio0_interrupcao
     CALL actualiza_posicao 
   actualizar_posicao_comboio1:
-    MOV R2, localizacao_comboio1
-    MOV R3,R2
-    ADD R3, 2                                     ;aceder ao 2º endereço da tabela que contem o valor anterior 
-    MOV R5, ultimo_sensor_activo_comboio1
+    MOV R1, localizacao_comboio1 
+    MOV R5, ultimo_sensor_comboio1_interrupcao
     CALL actualiza_posicao 
 fim_actualizar_posicao_comboios:
 POP R5
 POP R3
+POP R2
+POP R1
 RET
 
 ;----------------------------------------------------------------------------------------
 
-actualiza_posicao:   ;R2 valor actual, R3 valor anterior da posicao 
+actualiza_posicao:   ;R1 endereco da tabela da localizaçao seguinte ; R5 ultimo sensor activo pelo comboio 
+PUSH R1 
 PUSH R2
+PUSH R3
 PUSH R5 
+PUSH R7
 PUSH R8
 PUSH R9
 PUSH R10 
-  MOV R8, [R2]
+  buscar_enderecos_da_tabela:
+  MOV R2,R1              ;  2º endereço da tabela (posicao actual)                        
+  ADD R2, 2
+  MOV R3, R2
+  ADD R3, 2              ; 3º endereço da tabela (posição anterior)
+  
+  MOV R7, [R2]
+  MOV R8, [R1]
   MOV R9, [R5] 
   MOV R10, VALOR_SENSOR_7
 
@@ -873,14 +897,18 @@ PUSH R10
   CMP R8, R9
   JZ fim_actualiza_posicao
 
-  MOV [R3], R8                              ; actualiza o valor anterior para o valor que ate agora era o presente 
-  MOV [R2], R9                              ; actualiza o valor actual para o novo valor actual 
+  MOV [R3], R7                              ; actualiza o valor anterior para o valor que ate agora era o presente 
+  MOV [R2], R8 
+  MOV [R1], R9                              ; actualiza o valor actual para o novo valor actual 
 fim_actualiza_posicao:
 POP R10 
 POP R9
 POP R8
+POP R7 
 POP R5
-POP R2 
+POP R3
+POP R2
+POP R1  
 RET  
 
 
@@ -901,16 +929,22 @@ PUSH R6
 PUSH R7
   MOV R5, localizacao_comboio0
   MOV R6, tabela_estados_troco
-  MOV R3, [R5]                      ; valor da localizacao actual do comboio 
+  MOV R1, [R5]                      ; valor da localizacao actual do comboio 
   ADD R5, 2                         ; endereco do valor anterior 
   MOV R2, [R5]                      ; valor da localizacao anterior do comboio 
+  ADD R5, 2
+  MOV R3, [R5]
+  reserver_o_troco_seguinte:
+    MOV R7, RESERVADO
+    MOV R0, R1
+    CALL alterar_o_troco 
   ocupar_o_troco_actual:
     MOV R7, OCUPADO
-    MOV R0, R3                          ; colocar a localizacao do comboio no argumento R0 
+    MOV R0, R2                          ; colocar a localizacao do comboio no argumento R0 
     CALL alterar_o_troco
   desocupar_o_troco_anterior:
     MOV R7, DESOCUPADO                  ; o estado R7 entra como argumento na alteracao do troco 
-    MOV R0, R2                          ; colocar a localizacao do comboio no argumento R0 
+    MOV R0, R3                          ; colocar a localizacao do comboio no argumento R0 
     CALL alterar_o_troco 
 fim_actualizar_estado_trocos:
 POP R7
@@ -925,6 +959,7 @@ RET
 ;-------------------------------------
 alterar_o_troco: ; Argumentos: R0(numero do troco), R6(endereco dos estados dos trocos), R7 (estado a escrever) 
 PUSH R0
+PUSH R4
 PUSH R6
 PUSH R7 
 PUSH R8
@@ -936,10 +971,13 @@ PUSH R8
   
   MOV [R6], R7              ; Ocupa ou Desocupa o Troco 
   CALL alterar_semaforo_correspondente
+  MOV R4, R0
+  CALL debugging_lights 
 fim_alterar_troco:
 POP R8
 POP R7
 POP R6
+POP R4
 POP R0
 RET 
 ;-------------------------------------
@@ -1025,6 +1063,55 @@ POP R0
 RET
 
 
+debugging_lights:
+PUSH R3 
+PUSH R4 
+MOV R3, 8010H
+  cmp_0_1: 
+    CMP R4, 2
+      JGT cmp2
+    MOV [R3], R4
+    JMP fim_debugging_lights
+  cmp2:
+    CMP R4, 2H
+      JNZ cmp3
+    MOV R4, 4H
+    MOV [R3], R4
+    JMP fim_debugging_lights
+  cmp3:
+    CMP R4, 3H
+      JNZ cmp4
+    MOV R4,8H
+    MOV [R3],R4 
+    JMP fim_debugging_lights 
+  cmp4:
+    CMP R4, 4H
+      JNZ cmp5
+    MOV R4, 10H
+    MOV [R3], R4
+    JMP fim_debugging_lights
+  cmp5:
+    CMP R4, 5H
+      JNZ cmp6
+    MOV R4, 20H
+    MOV [R3], R4
+    JMP fim_debugging_lights
+  cmp6:
+    CMP R4, 6H
+      JNZ cmp7
+    MOV R4, 40H
+    MOV [R3], R4
+    JMP fim_debugging_lights
+  cmp7:
+    CMP R4, 7H
+      JNZ fim_debugging_lights
+    MOV R4, 80H
+    MOV [R3], R4
+fim_debugging_lights:
+POP R4
+POP R3
+RET 
+
 
 ;*****************************************************************************************************************************
 ; Rotina de controle do comboio 
@@ -1087,16 +1174,36 @@ RET
 ;********************************************************************************************************************************
 
 interrupcao0:
+PUSH R1
+PUSH R2 
+PUSH R3
+MOV R3, INFORMACAO_SENSORES
+MOVB R1, [R3]
+MOVB R2, [R3]
+  BIT R1, 0                                   ; nao contamos o bit a 1 que e a parte de tras da carruagem 
+    JNZ fim_interrupcao0
+  BIT R1, 1                                   ; bit que diz qual o comboio 
+    JNZ sensor_comboio_1
+  sensor_comboio_0: 
+  MOV R3, ultimo_sensor_comobio0_interrupcao
+  MOV [R3], R2
+  JMP fim_interrupcao0
+  sensor_comboio_1:
+  MOV R3, ultimo_sensor_comboio1_interrupcao
+  MOV [R3], R2 
+
+fim_interrupcao0:
+POP R3
+POP R2
+POP R1 
 RFE
 
 interrupcao1:
 PUSH R3
 PUSH R7
-
-MOV R7, ON
-MOV R3, valor_interrupcao1
-MOV [R3], R7
-
+  MOV R7, ON
+  MOV R3, valor_interrupcao1
+  MOV [R3], R7
 POP R7
 POP R3
 RFE
